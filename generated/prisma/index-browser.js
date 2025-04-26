@@ -162,16 +162,14 @@ exports.Prisma.QueryMode = {
   insensitive: 'insensitive'
 };
 exports.UserRole = exports.$Enums.UserRole = {
-  MANUFACTURER: 'MANUFACTURER',
-  BRAND: 'BRAND',
-  RETAILER: 'RETAILER'
+  manufacturer: 'manufacturer',
+  retailer: 'retailer',
+  brand: 'brand'
 };
 
 exports.Status = exports.$Enums.Status = {
-  ACTIVE: 'ACTIVE',
-  INACTIVE: 'INACTIVE',
-  PENDING: 'PENDING',
-  BLOCKED: 'BLOCKED'
+  active: 'active',
+  inactive: 'inactive'
 };
 
 exports.Prisma.ModelName = {

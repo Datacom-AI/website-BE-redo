@@ -21,7 +21,7 @@ model User {
   password    String
   role        UserRole
   companyName String
-  status      Status   @default(INACTIVE)
+  status      Status   @default(inactive)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -50,14 +50,12 @@ model Admin {
 }
 
 enum UserRole {
-  MANUFACTURER
-  BRAND
-  RETAILER
+  manufacturer
+  retailer
+  brand
 }
 
 enum Status {
-  ACTIVE
-  INACTIVE
-  PENDING
-  BLOCKED
+  active
+  inactive
 }

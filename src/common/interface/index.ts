@@ -1,2 +1,2 @@
 // export all interfaces from this folder
-export * from './user.interface';
+export * from './auth.interface';
