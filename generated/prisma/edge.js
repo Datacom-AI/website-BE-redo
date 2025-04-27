@@ -160,7 +160,7 @@ const config = {
       "value": "prisma-client-js"
     },
     "output": {
-      "value": "/home/ongliem/Desktop/website-BE-redo/generated/prisma",
+      "value": "/Users/lee/Desktop/website-BE-redo/generated/prisma",
       "fromEnvVar": null
     },
     "config": {
@@ -169,12 +169,12 @@ const config = {
     "binaryTargets": [
       {
         "fromEnvVar": null,
-        "value": "debian-openssl-3.0.x",
+        "value": "darwin-arm64",
         "native": true
       }
     ],
     "previewFeatures": [],
-    "sourceFilePath": "/home/ongliem/Desktop/website-BE-redo/prisma/schema.prisma",
+    "sourceFilePath": "/Users/lee/Desktop/website-BE-redo/prisma/schema.prisma",
     "isCustomOutput": true
   },
   "relativeEnvPaths": {
@@ -192,7 +192,7 @@ const config = {
     "db": {
       "url": {
         "fromEnvVar": "DATABASE_URL",
-        "value": "postgresql://admin:1@localhost:5432/nest-prisma-db?schema=public"
+        "value": "postgres://admin:1@localhost:5432/nest-postgre-db"
       }
     }
   },

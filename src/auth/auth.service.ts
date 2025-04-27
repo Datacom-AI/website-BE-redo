@@ -1,71 +1,127 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import * as bcryptjs from 'bcryptjs';
 
-import { Status, UserRole } from 'generated/prisma';
+import { Status, UserRole, User } from 'generated/prisma';
 import { PrismaService } from 'src/prisma.service';
 
 import { RegisterUserDTO } from 'src/common/DTO';
 import { LoginUserDTO } from 'src/common/DTO/loginUserDTO';
 import { RegisterResponse } from 'src/common/interface/auth.interface';
 import { UserService } from 'src/users/users.service';
+import { Payload } from 'src/common/interface/payload.interface';
+import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class AuthService {
-  constructor(private UserService: UserService) {}
-  async registerService(payload: RegisterUserDTO): Promise<RegisterResponse> {
-    const existingUser = await this.prisma.user.findFirst({
-      where: {
-        OR: [{ email: payload.email }, { username: payload.username }],
-      },
-    });
+  constructor(
+    private UserService: UserService,
+    private prisma: PrismaService,
+    private jwtService: JwtService,
+  ) {}
 
-    if (existingUser) {
-      throw new BadRequestException(
-        'User created with the email/username you provided',
-        {
-          cause: new Error('User already exists'),
-          description: 'User already exists',
-        },
-      );
-    }
-
+  // register user
+  async registerService(
+    registerPayload: RegisterUserDTO,
+  ): Promise<RegisterResponse> {
     // save the user password in encrypted format
     const salt = await bcryptjs.genSalt(10);
-    const hashedPassword = await bcryptjs.hash(payload.password, salt);
+    const hashedPassword = await bcryptjs.hash(registerPayload.password, salt);
 
     // map the payload to the user object
     const userData = {
-      ...payload,
-      role: payload.role as unknown as UserRole,
-      status: payload.status as unknown as Status,
+      ...registerPayload,
+      role: registerPayload.role as unknown as UserRole,
+      status: registerPayload.status as unknown as Status,
       password: hashedPassword,
     };
 
     // return the user object
-    return await this.prisma.user.create({
-      data: userData,
-      select: {
-        id: true,
-        username: true,
-        email: true,
-        password: true,
-        role: true,
-        companyName: true,
-        status: true,
-      },
+    return this.UserService.createUser({
+      ...userData,
     });
   }
 
   // login user
-  async loginService(loginUserDTO: LoginUserDTO) {
-    const user = await this.prisma.user.findFirst({
-      where: {
-        email: loginUserDTO.email,
-      },
-    });
+  async loginService(
+    loginPayload: LoginUserDTO,
+  ): Promise<{ accessToken: string; refreshToken: string }> {
+    const { email, password } = loginPayload;
+    const user = await this.UserService.findByEmail(email);
+    const comparePassword: boolean = await bcryptjs.compare(
+      password,
+      user.password,
+    );
+
+    if (!comparePassword) {
+      throw new BadRequestException('Invalid credentials');
+    }
 
     if (!user) {
-      throw new BadRequestException('User not found');
+      throw new BadRequestException('User with given email not found');
     }
+
+    const accessToken = this.generateAccessToken(user);
+    const refreshToken = this.generateRefreshToken(user);
+
+    return {
+      accessToken,
+      refreshToken,
+    };
+  }
+
+  // refresh token service
+  refreshTokenService(user: User): { accessToken: string } {
+    if (!user) {
+      throw new BadRequestException('User is required to generate a new token');
+    }
+
+    const newAccessToken = this.generateAccessToken(user);
+    return {
+      accessToken: newAccessToken,
+    };
+  }
+
+  /* ---- PRIVATE METHODS ---- */
+
+  // generate access token
+  private generateAccessToken(user: User): string {
+    if (!user) {
+      throw new BadRequestException(
+        'User is required to generate an access token',
+      );
+    }
+
+    const payload: Payload = {
+      id: user.id,
+      email: user.email,
+    };
+
+    const accessToken = this.jwtService.sign(payload, {
+      secret: process.env.JWT_SECRET,
+      expiresIn: '30s',
+    });
+
+    return accessToken;
+  }
+
+  // generate refresh token
+  private generateRefreshToken(user: User): string {
+    if (!user) {
+      throw new BadRequestException(
+        'User is required to generate a refresh token',
+      );
+    }
+
+    const payload: Payload = {
+      id: user.id,
+      email: user.email,
+    };
+
+    const refreshToken = this.jwtService.sign(payload, {
+      secret: process.env.JWT_REFRESH_SECRET,
+      expiresIn: '1m',
+    });
+
+    return refreshToken;
   }
 }

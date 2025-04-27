@@ -6,7 +6,7 @@ import {
   ValidateIf,
 } from 'class-validator';
 
-export class CustomerUpdateDTO {
+export class UserUpdateCredentialDTO {
   @IsString()
   @IsNotEmpty()
   username: string;

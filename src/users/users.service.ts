@@ -6,13 +6,15 @@ import {
 } from '@nestjs/common';
 import { User } from 'generated/prisma';
 import * as bcryptjs from 'bcryptjs';
-import { CustomerRawDataDTO, UserRawDTO } from 'src/common/DTO/user.raw.dto';
-import { CustomerUpdateDTO } from 'src/common/DTO/user.credential.dto';
+import { UserRawDTO } from 'src/common/DTO/user.raw.dto';
+import { UserUpdateCredentialDTO } from 'src/common/DTO/user.credential.dto';
 import { PrismaService } from 'src/prisma.service';
 
 @Injectable()
 export class UserService {
   constructor(private prisma: PrismaService) {}
+
+  /* ---- RAW METHODS ---- */
 
   // get all users
   async findAll() {
@@ -24,6 +26,7 @@ export class UserService {
     if (!id) {
       throw new Error('User ID is required');
     }
+
     try {
       const user = await this.prisma.user.findUnique({
         where: {
@@ -37,7 +40,7 @@ export class UserService {
 
       return user;
     } catch (error) {
-      throw new NotFoundException('User not found', {
+      throw new BadRequestException('Invalid ID provided', {
         cause: error,
         description: 'Invalid',
       });
@@ -77,9 +80,9 @@ export class UserService {
       });
     } catch (error) {
       if (error.code === 'P2002') {
-        throw new ConflictException('User already exists');
+        throw new ConflictException('Username or email already exists');
       }
-      throw new BadRequestException('Error creating user');
+      throw new BadRequestException('Invalid user data provided');
     }
   }
 
@@ -119,5 +122,67 @@ export class UserService {
   }
 
   // compare user data
-  async compareUserData(user: User): Promise<boolean> {}
+  async compareUserData(user: User): Promise<boolean> {
+    const validateUser = await this.prisma.user.findUnique({
+      where: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        password: user.password,
+        role: user.role,
+        companyName: user.companyName,
+      },
+    });
+
+    if (!validateUser) {
+      throw new NotFoundException('User not found');
+    }
+    return true;
+  }
+
+  /* ---- SERVICE METHODS ---- */
+
+  // update user account information
+  async updateAccountService(
+    user: User,
+    userData: UserUpdateCredentialDTO,
+  ): Promise<User> {
+    // Check if the user exists
+    if (!user || !userData) {
+      throw new NotFoundException('User not found');
+    }
+
+    let hashedPassword = user.password;
+    const userExists = await this.findOne(user.id);
+    if (userData.oldPassword) {
+      if (
+        bcryptjs.compareSync(userData.oldPassword, userExists.password) &&
+        userData.newPassword === userData.confirmPassword
+      ) {
+        const salt: string = await bcryptjs.genSalt(10);
+        hashedPassword = await bcryptjs.hash(userData.newPassword, salt);
+      } else {
+        throw new BadRequestException('Invalid password');
+      }
+    }
+
+    return await this.updateUser(user.id, {
+      ...userData,
+      password: hashedPassword,
+      updatedAt: new Date(),
+    });
+  }
+
+  // delte user account
+  async deleteAccountService(user: User): Promise<User> {
+    // Check if the user exists
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    // Delete the user
+    const userRemove = await this.deleteUser(user.id);
+
+    return userRemove;
+  }
 }
