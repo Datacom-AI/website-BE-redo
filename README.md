@@ -30,7 +30,7 @@ $ pnpm run test:e2e
 $ pnpm run test:cov
 ```
 
-## Other specifications
+## Prisma guide
 
 ### Install Prisma
 
@@ -62,7 +62,7 @@ $ prisma migrate dev
 
 ### Generate
 
-Only do this if the import process of '@prisma/client' is not working. You will need to change the imports to "... from '@prisma/client'" to "... from 'generated/prisma'"
+Only do this if the import process of '@prisma/client' is not working. You will need to change the imports from "... from '@prisma/client'" to "... from 'generated/prisma'"
 
 ```bash
 # generate dependencies with this command
@@ -83,3 +83,15 @@ $ npx prisma migrate reset
 # or this instead
 $ prisma migrate reset
 ```
+
+## Other specifications
+
+### About database
+
+Database recommendation is PostgreSQL, not MongoDB. Since we have many roles, including Admin, we need to change to SQL-like database for easier database queries. <i>This note will be deleted in the final MVP</i>
+
+I'm running on local database, and on the way to migrate this to AWS S3 bucket.
+
+### Backend guide
+
+All the necessary API routes are created. Also I have already done a bit of the API handling setups in the FE repository. Please check the 'website-FE' for more information. <i>This note will also be deleted in the final MVP</i>
