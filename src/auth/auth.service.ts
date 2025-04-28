@@ -5,7 +5,7 @@ import { Status, UserRole, User } from 'generated/prisma';
 import { PrismaService } from 'src/prisma.service';
 
 import { RegisterUserDTO } from 'src/common/DTO';
-import { LoginUserDTO } from 'src/common/DTO/loginUserDTO';
+import { LoginUserDTO } from 'src/common/DTO/auth/loginUser.dto';
 import { RegisterResponse } from 'src/common/interface/auth.interface';
 import { UserService } from 'src/users/users.service';
 import { Payload } from 'src/common/interface/payload.interface';

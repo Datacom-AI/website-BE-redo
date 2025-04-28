@@ -16,37 +16,356 @@ datasource db {
 
 model User {
   id String @id @default(uuid())
-  username String
   email String @unique
+  name String
   password String
+
+  // enums
   role UserRole
-  companyName String
-  status Status @default(inactive)
+  status Status @default(online)
+
+  // info fields
+  jobTitle String?
+  profileImageUrl String?
+  bannerImageUrl String?
+  professionalBio String?
+  socialLinks Social[]
+  
+  // refer to CompanyInformation
+  companyInfo CompanyInformation?
+
+  // refer to ManufacturingCapability
+  manufacturingCapability ManufacturingCapability?
+
+  // refer to NotificationPreferences (one-to-one)
+  notificationPreferences NotificationPreferences?
+
+  // refer to SecuritySettings (one-to-one)
+  securitySettings SecuritySettings?
+
+  // refer to ApplicationPreferences (one-to-one)
+  applicationPreferences ApplicationPreferences?
+
+  // refer to ProductionLine (one-to-many)
+  productionLine ProductionLine[]
+
+  // refer to InventoryItems (one-to-many)
+  inventoryItems InventoryItems[]
+
+  // refer to Product (one-to-many)
+  products CatalogProduct[]
+
+  // refer to Review (one-to-many)
+  reviewsWritten Review[]
+
+  // other fields
+  isVerifiedManufacturer Boolean @default(false)
+  isProfilePublic Boolean @default(false)
+  showProductionCapacity Boolean @default(false)
+  showCertifications Boolean @default(false)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@map("users")
 }
 
-model Product {
-  id String @id @default(uuid())
+model CompanyInformation {
+  id String @id @default(uuid()) @db.Uuid
+
+  // refer to User
+  userId String @unique @db.Uuid
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // info fields
   name String
-  brand String
-  category String
-  description String
-  price Float
-  countInStock Int
-  image String
-  rating Int
-  numReviews Int
+  companyEmail String?
+  phoneNumber String?
+  companyWebsite String?
+
+  // address fields
+  addressStreet String?
+  addressCity String?
+  addressState String?
+  addressZipCode String?
+
+  // company description
+  companyDescription String?
+
+  // company tags
+  tags CompanyTag[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@map("company_information")
+}
+
+model CompanyTag {
+  id String @id @default(uuid()) @db.Uuid
+  value String
+
+  // relationship with CompanyInformation
+  companyInfo CompanyInformation @relation(fields: [companyInfoId], references: [id], onDelete: Cascade)
+  companyInfoId String @db.Uuid
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([companyInfoId, value])
+  @@map("company_tags")
+}
+
+model ManufacturingCapability {
+  id String @id @default(uuid())
+
+  // refer to user
+  userId String @unique @db.Uuid
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  productionCapacity Int?
+  minimumOrderValue Float?
+
+  // certification & compliance fields
+  certificationCompliance String?
+
+  // materials handled
+  materialsHandled MaterialHandled[]
+
+  // specialties
+  specialties Specialty[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("manufacturing_capabilities")
+}
+
+model MaterialHandled {
+  id String @id @default(uuid())
+  value String
+
+  // relationship with ManufacturingCapability (many-to-one)
+ 
+  // only applicable to manufacturers
+  manufacturingCapability ManufacturingCapability @relation(fields: [manufacturingCapabilityId], references: [id], onDelete: Cascade)
+  manufacturingCapabilityId String @db.Uuid
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([manufacturingCapabilityId, value])
+  @@map("materials_handled")
+}
+
+model Specialty {
+  id String @id @default(uuid())
+  value String
+
+  manufacturingCapability ManufacturingCapability @relation(fields: [manufacturingCapabilityId], references: [id], onDelete: Cascade)
+  manufacturingCapabilityId String @db.Uuid
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([manufacturingCapabilityId, value])
+  @@map("specialties")
+}
+
+model NotificationPreferences {
+  id String @id @default(uuid())
+
+  // refer to user
+  userId String @unique @db.Uuid
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // notification preferences
+  emailNotifications Boolean @default(true)
+  messageNotifications Boolean @default(true)
+  matchNotifications Boolean @default(true)
+  marketingEmails Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("notification_preferences")
+}
+
+model SecuritySettings {
+  id String @id @default(uuid())
+
+  // refer to user
+  userId String @unique @db.Uuid
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /* SECURITY SETTINGS */
+  // 2FA
+  twoFactorAuthentication Boolean @default(false)
+  twoFactorSecret String?
+  twoFactorConfirmed Boolean @default(false)
+
+  // backup codes
+  backupCodes String[]
+
+  // other security settings
+  alertNewLogin Boolean @default(true)
+  alertNewDeviceLogin Boolean @default(true)
+  alertPasswordChanges Boolean @default(true)
+  alertSuspiciousActivity Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("security_settings")
+}
+
+model ApplicationPreferences {
+  id String @id @default(uuid())
+
+  // refer to user
+  userId String @unique @db.Uuid
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // application preferences
+  language String @default("English")
+  theme String @default("light")
+  compactSidebarEnabled Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("application_preferences")
+}
+
+model ProductionLine {
+  id String @id @default(uuid())
+
+  // refer to user
+  userId String @db.Uuid
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // production line information
+  name String
+  lineType String
+  initialStatus String?
+  operatorAssigned String
+  targetEfficiency Int?
+  nextMaintenanceDate DateTime
+  operationalSince DateTime?
+  energyConsumptionKwh Float?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("production_lines")
+}
+
+model InventoryItems {
+  id String @id @default(uuid())
+
+  // refer to user
+  userId String @db.Uuid
+  user User @relation(fields: [userId], references: [id])
+
+  itemName String
+  itemCategory String
+  itemSKU String
+  currentStock Int @default(0)
+  maximumStock Int?
+
+  storageLocation String?
+  description String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, itemSKU])
+  @@map("inventory_items")
 }
 
 model Admin {
-  id String @unique @default(uuid())
+  id String @id @default(uuid())
   username String
   password String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model CatalogProduct {
+  id String @id @default(uuid()) @db.Uuid
+
+  // refer to user
+  userId String @db.Uuid
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // product information
+  name String
+  category String
+  minimumOrderQuantity Int
+  dailyCapacity Int
+  unitType UnitType @default(units)
+  currentAvailableStock Int
+  pricePerUnit Float
+  productType ProductType @default(finishedGood)
+  leadTime String?
+  leadTimeUnit LeadTimeUnit @default(days)
+  description String?
+  imageUrl String?
+  isSustainableProduct Boolean @default(false)
+  productSKU String @unique
+
+  // refer to Review (one-to-many)
+  productReviews Review[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, productSKU])
+  @@map("catalog_products")
+}
+
+model Review {
+  id String @id @default(uuid()) @db.Uuid
+
+  userId String
+  author User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // refer to CatalogProduct (many-to-one)
+  catalogProductId String @db.Uuid
+  product CatalogProduct @relation(fields: [catalogProductId], references: [id], onDelete: Cascade)
+
+  rating Int
+  comment String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, catalogProductId])
+  @@map("reviews")
+}
+
+model Order {
+  id String @id @default(uuid())
+  userId String
+  productId String
+  quantity Int
+  totalPrice Float
+  status String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Social {
+  id String @id @default(uuid()) @db.Uuid
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String @db.Uuid
+  platform String
+  url String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, platform])
+  @@map("social_links")
 }
 
 enum UserRole {
@@ -56,6 +375,42 @@ enum UserRole {
 }
 
 enum Status {
-  active
-  inactive
+  online
+  away
+  busy
+}
+
+// enum for product
+enum UnitType {
+  units
+  boxes
+  bottles
+  kilograms
+  liters
+  sachets
+  pairs
+  cases
+  packets
+  cartons
+  bags
+  pouches
+  jars
+  tubes
+  cans
+}
+
+enum ProductType {
+  finishedGood
+  semiFinishedGood
+  rawMaterial
+  component
+  packagingMaterial
+  bulkProduct
+}
+
+enum LeadTimeUnit {
+  days
+  weeks
+  months
+  years
 }
