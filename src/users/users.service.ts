@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { User } from 'generated/prisma';
 import * as bcryptjs from 'bcryptjs';
-import { UserRawDTO } from 'src/common/DTO/user.raw.dto';
+import { UserRawDTO } from 'src/common/DTO';
 import { UserUpdateCredentialDTO } from 'src/common/DTO/user/user.credential.dto';
 import { PrismaService } from 'src/prisma.service';
 

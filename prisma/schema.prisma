@@ -15,7 +15,7 @@ datasource db {
 }
 
 model User {
-  id String @id @default(uuid())
+  id String @id @default(uuid()) @db.Uuid
   email String @unique
   name String
   password String
@@ -31,11 +31,11 @@ model User {
   professionalBio String?
   socialLinks Social[]
   
+  /* 
+    CORE RELATIONSHIPS 
+  */
   // refer to CompanyInformation
   companyInfo CompanyInformation?
-
-  // refer to ManufacturingCapability
-  manufacturingCapability ManufacturingCapability?
 
   // refer to NotificationPreferences (one-to-one)
   notificationPreferences NotificationPreferences?
@@ -46,28 +46,97 @@ model User {
   // refer to ApplicationPreferences (one-to-one)
   applicationPreferences ApplicationPreferences?
 
-  // refer to ProductionLine (one-to-many)
-  productionLine ProductionLine[]
+  /* 
+    ROLE-BASED RELATIONSHIPS
+  */
+  manufacturerProfile ManufacturerProfile?
+  brandProfile BrandProfile?
+  retailerProfile RetailerProfile?
 
-  // refer to InventoryItems (one-to-many)
-  inventoryItems InventoryItems[]
-
-  // refer to Product (one-to-many)
-  products CatalogProduct[]
+  // refer to Order (one-to-many)
+  orders Order[]
 
   // refer to Review (one-to-many)
   reviewsWritten Review[]
 
+  // refer to Supplier (one-to-many)
+  addedSuppliers Supplier[]
+
+  // refer to Match
+  brandMatches Match[] @relation("BrandMatches")
+  manufacturerMatches Match[] @relation("ManufacturerMatches")
+
+  // refer to UserMatchStatus (one-to-many)
+  userMatchStatus UserMatchStatus[] @relation("UserMatchStatuses")
+
   // other fields
-  isVerifiedManufacturer Boolean @default(false)
+
   isProfilePublic Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+model ManufacturerProfile {
+  id String @id @default(uuid()) @db.Uuid
+
+  // refer to user
+  userId String @unique @db.Uuid
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // refer to CatalogProduct (one-to-many)
+  products CatalogProduct[]
+
+  // refer to InventoryItems (one-to-many)
+  inventoryItems InventoryItems[]
+
+  // refer to ProductionLine (one-to-many)
+  productionLines ProductionLine[]
+
+  // refer to ManufacturingCapability (one-to-one)
+  manufacturingCapability ManufacturingCapability?
+
+  isVerifiedManufacturer Boolean @default(false)
   showProductionCapacity Boolean @default(false)
   showCertifications Boolean @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@map("users")
+  @@index([userId])
+  @@map("manufacturer_profiles")
+}
+
+model BrandProfile {
+  id String @id @default(uuid()) @db.Uuid
+
+  userId String @unique @db.Uuid
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // brand-specific fields/relations go here
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("brand_profiles")
+}
+
+model RetailerProfile {
+  id String @id @default(uuid()) @db.Uuid
+
+  userId String @unique @db.Uuid
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // retailer-specific fields/relations go here
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("retailer_profiles")
 }
 
 model CompanyInformation {
@@ -82,6 +151,7 @@ model CompanyInformation {
   companyEmail String?
   phoneNumber String?
   companyWebsite String?
+  establishedYear Int?
 
   // address fields
   addressStreet String?
@@ -98,12 +168,13 @@ model CompanyInformation {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([userId])
   @@map("company_information")
 }
 
 model CompanyTag {
   id String @id @default(uuid()) @db.Uuid
-  value String
+  name String
 
   // relationship with CompanyInformation
   companyInfo CompanyInformation @relation(fields: [companyInfoId], references: [id], onDelete: Cascade)
@@ -112,16 +183,17 @@ model CompanyTag {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([companyInfoId, value])
+  @@unique([companyInfoId, name])
+  @@index([companyInfoId])
   @@map("company_tags")
 }
 
 model ManufacturingCapability {
-  id String @id @default(uuid())
+  id String @id @default(uuid()) @db.Uuid
 
   // refer to user
-  userId String @unique @db.Uuid
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  manufacturerProfileId String @unique @db.Uuid
+  manufacturerProfile ManufacturerProfile @relation(fields: [manufacturerProfileId], references: [id], onDelete: Cascade)
 
   productionCapacity Int?
   minimumOrderValue Float?
@@ -138,12 +210,13 @@ model ManufacturingCapability {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([manufacturerProfileId])
   @@map("manufacturing_capabilities")
 }
 
 model MaterialHandled {
-  id String @id @default(uuid())
-  value String
+  id String @id @default(uuid()) @db.Uuid
+  name String
 
   // relationship with ManufacturingCapability (many-to-one)
  
@@ -154,13 +227,14 @@ model MaterialHandled {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([manufacturingCapabilityId, value])
+  @@unique([manufacturingCapabilityId, name])
+  @@index([manufacturingCapabilityId])
   @@map("materials_handled")
 }
 
 model Specialty {
-  id String @id @default(uuid())
-  value String
+  id String @id @default(uuid()) @db.Uuid
+  name String
 
   manufacturingCapability ManufacturingCapability @relation(fields: [manufacturingCapabilityId], references: [id], onDelete: Cascade)
   manufacturingCapabilityId String @db.Uuid
@@ -168,12 +242,13 @@ model Specialty {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([manufacturingCapabilityId, value])
+  @@unique([manufacturingCapabilityId, name])
+  @@index([manufacturingCapabilityId])
   @@map("specialties")
 }
 
 model NotificationPreferences {
-  id String @id @default(uuid())
+  id String @id @default(uuid()) @db.Uuid
 
   // refer to user
   userId String @unique @db.Uuid
@@ -188,11 +263,12 @@ model NotificationPreferences {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([userId])
   @@map("notification_preferences")
 }
 
 model SecuritySettings {
-  id String @id @default(uuid())
+  id String @id @default(uuid()) @db.Uuid
 
   // refer to user
   userId String @unique @db.Uuid
@@ -216,11 +292,12 @@ model SecuritySettings {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([userId])
   @@map("security_settings")
 }
 
 model ApplicationPreferences {
-  id String @id @default(uuid())
+  id String @id @default(uuid()) @db.Uuid
 
   // refer to user
   userId String @unique @db.Uuid
@@ -234,15 +311,16 @@ model ApplicationPreferences {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([userId])
   @@map("application_preferences")
 }
 
 model ProductionLine {
-  id String @id @default(uuid())
+  id String @id @default(uuid()) @db.Uuid
 
   // refer to user
-  userId String @db.Uuid
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  manufacturerProfileId String @db.Uuid
+  manufacturerProfile ManufacturerProfile @relation(fields: [manufacturerProfileId], references: [id], onDelete: Restrict)
 
   // production line information
   name String
@@ -250,122 +328,279 @@ model ProductionLine {
   initialStatus String?
   operatorAssigned String
   targetEfficiency Int?
-  nextMaintenanceDate DateTime
+  nextMaintenanceDate DateTime?
   operationalSince DateTime?
   energyConsumptionKwh Float?
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([manufacturerProfileId])
   @@map("production_lines")
 }
 
 model InventoryItems {
-  id String @id @default(uuid())
+  id String @id @default(uuid()) @db.Uuid
 
   // refer to user
-  userId String @db.Uuid
-  user User @relation(fields: [userId], references: [id])
+  manufacturerProfileId String @db.Uuid
+  manufacturerProfile ManufacturerProfile @relation(fields: [manufacturerProfileId], references: [id], onDelete: Restrict)
 
   itemName String
   itemCategory String
   itemSKU String
   currentStock Int @default(0)
   maximumStock Int?
-
   storageLocation String?
   description String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([userId, itemSKU])
+  @@unique([manufacturerProfileId, itemSKU])
+  @@index([manufacturerProfileId])
   @@map("inventory_items")
-}
-
-model Admin {
-  id String @id @default(uuid())
-  username String
-  password String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 }
 
 model CatalogProduct {
   id String @id @default(uuid()) @db.Uuid
 
   // refer to user
-  userId String @db.Uuid
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  manufacturerProfileId String @db.Uuid
+  manufacturerProfile ManufacturerProfile @relation(fields: [manufacturerProfileId], references: [id], onDelete: Cascade)
 
   // product information
   name String
-  category String
+  
+  productCategoryId String @db.Uuid
+  productCategory ProductCategory @relation(fields: [productCategoryId], references: [id])
+
   minimumOrderQuantity Int
   dailyCapacity Int
   unitType UnitType @default(units)
   currentAvailableStock Int
-  pricePerUnit Float
+  pricePerUnit Float 
   productType ProductType @default(finishedGood)
   leadTime String?
   leadTimeUnit LeadTimeUnit @default(days)
   description String?
   imageUrl String?
   isSustainableProduct Boolean @default(false)
-  productSKU String @unique
+  productSKU String
 
   // refer to Review (one-to-many)
   productReviews Review[]
 
+  // refer to Order (one-to-many)
+  orders Order[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([userId, productSKU])
+  @@unique([manufacturerProfileId, productSKU])
+  @@index([manufacturerProfileId])
+  @@index([productCategoryId])
+  @@index([name])
   @@map("catalog_products")
+}
+
+model ProductCategory {
+  id String @id @default(uuid()) @db.Uuid
+
+  name String @unique
+
+  // refer to CatalogProduct (one-to-many)
+  products CatalogProduct[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("product_categories")
 }
 
 model Review {
   id String @id @default(uuid()) @db.Uuid
 
-  userId String
+  userId String @db.Uuid
   author User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // refer to CatalogProduct (many-to-one)
   catalogProductId String @db.Uuid
   product CatalogProduct @relation(fields: [catalogProductId], references: [id], onDelete: Cascade)
 
-  rating Int
+  rating Int?
   comment String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@unique([userId, catalogProductId])
+  @@index([userId])
+  @@index([catalogProductId])
   @@map("reviews")
 }
 
 model Order {
-  id String @id @default(uuid())
-  userId String
-  productId String
+  id String @id @default(uuid()) @db.Uuid
+
+  userId String @db.Uuid
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  // refer to CatalogProduct (many-to-one)
+  productId String @db.Uuid
+  product CatalogProduct @relation(fields: [productId], references: [id], onDelete: Restrict)
+
   quantity Int
   totalPrice Float
-  status String
+  status OrderStatus @default(pending)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([productId])
+  @@map("orders")
 }
 
 model Social {
   id String @id @default(uuid()) @db.Uuid
+
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId String @db.Uuid
+
   platform String
   url String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@unique([userId, platform])
+  @@index([userId])
   @@map("social_links")
+}
+
+model Supplier {
+  id String @id @default(uuid()) @db.Uuid
+  name String
+
+  // refer to user
+  userId String @db.Uuid
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // refer to SupplierCategory
+  supplierCategoryId String @db.Uuid
+  supplierCategory SupplierCategory @relation(fields: [supplierCategoryId], references: [id])
+  
+  // supplier info
+  contactPerson String
+  contactEmail String
+  contactPhone String
+  city String
+  country String
+  fullAddress String?
+  description String?
+  status SupplierStatus @default(pending)
+  reliabilityRating Float?
+  leadTime String?
+
+  materials SupplierMaterial[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([supplierCategoryId])
+  @@map("suppliers")
+}
+
+model SupplierMaterial {
+  id String @id @default(uuid()) @db.Uuid
+  
+  name String // name of material
+  supplierId String @db.Uuid
+  supplier Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([supplierId, name])
+  @@index([supplierId])
+  @@map("supplier_materials")
+}
+
+model SupplierCategory {
+  id String @id @default(uuid()) @db.Uuid
+
+  name String @unique
+
+  // refer to Supplier (one-to-many)
+  supplier Supplier[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("supplier_categories")
+}
+
+model Match {
+  id String @id @default(uuid()) @db.Uuid
+
+  brandId String @db.Uuid
+  brand User @relation("BrandMatches", fields: [brandId], references: [id], onDelete: Cascade)
+
+  manufacturerId String @db.Uuid
+  manufacturer User @relation("ManufacturerMatches", fields: [manufacturerId], references: [id], onDelete: Cascade)
+
+  description String?
+
+  matchPercentage Float?
+
+  // refer to UserMatchStatus (one-to-many)
+  userStatus UserMatchStatus[] @relation("MatchUserStatus")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([brandId, manufacturerId])
+  @@index([brandId])
+  @@index([manufacturerId])
+  @@map("matches")
+}
+
+model UserMatchStatus {
+  id String @id @default(uuid()) @db.Uuid
+
+  // refer to User
+  userId String @db.Uuid
+  user User @relation("UserMatchStatuses", fields: [userId], references: [id], onDelete: Cascade)
+  
+  // refer to Match
+  matchId String @db.Uuid
+  match Match @relation("MatchUserStatus", fields: [matchId], references: [id], onDelete: Cascade)
+
+  status MatchingStatus @default(pending)
+
+  isStarred Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, matchId])
+  @@index([userId])
+  @@index([matchId])
+  @@index([userId, status])
+  @@map("user_match_status")
+}
+
+model Admin {
+  id String @id @default(uuid()) @db.Uuid
+
+  username String @unique
+  password String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("admins")
 }
 
 enum UserRole {
@@ -413,4 +648,24 @@ enum LeadTimeUnit {
   weeks
   months
   years
+}
+
+enum OrderStatus {
+  pending
+  processing
+  shipped
+  delivered
+  cancelled
+}
+
+enum SupplierStatus {
+  pending
+  active
+}
+
+enum MatchingStatus {
+  pending
+  accepted
+  declined
+  reconsidered
 }
