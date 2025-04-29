@@ -4,8 +4,8 @@ import * as bcryptjs from 'bcryptjs';
 import { Status, UserRole, User } from 'generated/prisma';
 import { PrismaService } from 'src/prisma.service';
 
-import { RegisterUserDTO } from 'src/common/DTO';
-import { LoginUserDTO } from 'src/common/DTO/auth/loginUser.dto';
+import { AuthRegisterUserDTO } from 'src/common/DTO';
+import { AuthLoginUserDTO } from 'src/common/DTO/auth/auth.loginUser.dto';
 import { RegisterResponse } from 'src/common/interface/auth.interface';
 import { UserService } from 'src/users/users.service';
 import { Payload } from 'src/common/interface/payload.interface';
@@ -21,7 +21,7 @@ export class AuthService {
 
   // register user
   async registerService(
-    registerPayload: RegisterUserDTO,
+    registerPayload: AuthRegisterUserDTO,
   ): Promise<RegisterResponse> {
     // save the user password in encrypted format
     const salt = await bcryptjs.genSalt(10);
@@ -43,7 +43,7 @@ export class AuthService {
 
   // login user
   async loginService(
-    loginPayload: LoginUserDTO,
+    loginPayload: AuthLoginUserDTO,
   ): Promise<{ accessToken: string; refreshToken: string }> {
     const { email, password } = loginPayload;
     const user = await this.UserService.findByEmail(email);

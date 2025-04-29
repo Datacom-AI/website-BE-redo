@@ -1,10 +1,34 @@
 import { Status, UserRole } from 'generated/prisma';
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsString,
+  IsOptional,
+  IsEnum,
+} from 'class-validator';
 
 export class UserRawDTO {
+  @IsNotEmpty()
+  @IsEmail()
   email: string;
-  username: string;
+
+  @IsNotEmpty()
+  @IsString()
+  name: string;
+
+  @IsNotEmpty()
+  @IsString()
   password: string;
-  companyName: string;
+
+  @IsOptional()
+  @IsString()
+  companyName?: string;
+
+  @IsNotEmpty()
+  @IsEnum(UserRole)
   role: UserRole;
-  status: Status;
+
+  @IsOptional()
+  @IsEnum(Status)
+  status?: Status;
 }
