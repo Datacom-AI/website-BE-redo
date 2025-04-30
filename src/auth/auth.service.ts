@@ -6,7 +6,7 @@ import { PrismaService } from 'src/prisma.service';
 
 import { RegisterUserDTO } from 'src/common/DTO';
 import { LoginUserDTO } from 'src/common/DTO/auth/loginUser.dto';
-// import { RegisterResponse } from 'src/common/interface/auth.interface';
+import { RegisterResponse } from 'src/common/interface/auth.interface';
 import { UserService } from 'src/users/users.service';
 import { Payload } from 'src/common/interface/payload.interface';
 import { JwtService } from '@nestjs/jwt';
@@ -20,7 +20,9 @@ export class AuthService {
   ) {}
 
   // register user
-  async registerService(registerPayload: RegisterUserDTO): Promise<User> {
+  async registerService(
+    registerPayload: RegisterUserDTO,
+  ): Promise<RegisterResponse> {
     // save the user password in encrypted format
     const salt = await bcryptjs.genSalt(10);
     const hashedPassword = await bcryptjs.hash(registerPayload.password, salt);
