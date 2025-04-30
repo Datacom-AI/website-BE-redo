@@ -7,24 +7,42 @@ import {
   IsUUID,
   Min,
 } from 'class-validator';
-import { OrderStatus } from 'generated/prisma';
+import { SupplierStatus } from 'generated/prisma';
 
-export class OrderQueryDTO {
+export class SupplierQueryDTO {
   @IsOptional()
   @IsUUID()
   userId?: string;
 
   @IsOptional()
-  @IsEnum(OrderStatus)
-  status?: OrderStatus;
+  @IsUUID()
+  supplierCategoryId?: string;
 
   @IsOptional()
-  @Type(() => Date)
-  startDate?: Date;
+  @IsEnum(SupplierStatus)
+  status?: SupplierStatus;
 
   @IsOptional()
-  @Type(() => Date)
-  endDate?: Date;
+  @IsString()
+  name?: string;
+
+  @IsOptional()
+  @IsString()
+  city?: string;
+
+  @IsOptional()
+  @IsString()
+  country?: string;
+
+  @IsOptional()
+  @IsString()
+  contactPerson?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page?: number = 1;
 
   @IsOptional()
   @Type(() => Number)
