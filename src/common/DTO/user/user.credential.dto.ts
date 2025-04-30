@@ -4,30 +4,35 @@ import {
   IsOptional,
   IsString,
   ValidateIf,
+  Matches,
 } from 'class-validator';
+import { ArePasswordMatching } from 'src/common/decorators/passwordMatching.decorator';
 
 export class UserUpdateCredentialDTO {
+  @IsOptional()
   @IsString()
   @IsNotEmpty()
-  username: string;
+  name?: string;
 
+  @IsOptional()
   @IsNotEmpty()
   @IsEmail()
   email: string;
 
   @IsString()
   @IsOptional()
-  oldPassword: string;
+  oldPassword?: string;
 
   @IsString()
   @IsOptional()
   @ValidateIf((o) => o.oldPassword)
   @IsNotEmpty()
-  newPassword: string;
+  newPassword?: string;
 
   @IsString()
   @IsOptional()
   @ValidateIf((o) => o.oldPassword)
   @IsNotEmpty()
-  confirmPassword: string;
+  @ArePasswordMatching('newPassword', { message: 'Passwords do not match' })
+  confirmPassword?: string;
 }
