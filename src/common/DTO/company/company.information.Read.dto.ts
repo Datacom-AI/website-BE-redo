@@ -1,4 +1,6 @@
-import { CompanyTagReadDTO } from './company.tagRead.dto';
+import { IsNotEmpty } from 'class-validator';
+
+import { CompanyTagReadDTO } from './company.tag.Read.dto';
 
 export class CompanyInformationReadDTO {
   id: string;

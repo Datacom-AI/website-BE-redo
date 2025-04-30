@@ -1,4 +1,4 @@
-export class ApplicationPreferencesReadDTO {
+export class PreferencesApplicationReadDTO {
   id: string;
 
   language: string;

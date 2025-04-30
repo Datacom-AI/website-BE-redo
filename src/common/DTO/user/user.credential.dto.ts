@@ -4,7 +4,6 @@ import {
   IsOptional,
   IsString,
   ValidateIf,
-  Matches,
 } from 'class-validator';
 import { ArePasswordMatching } from 'src/common/decorators/passwordMatching.decorator';
 

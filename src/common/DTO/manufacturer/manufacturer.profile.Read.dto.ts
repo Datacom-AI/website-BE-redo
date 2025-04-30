@@ -1,4 +1,4 @@
-import { ManufacturingCapabilityReadDTO } from '../others/manufacturingCapabilityRead.dto';
+import { ManufacturingCapabilityReadDTO } from '../manufacturingCapability/manufacturingCapability.Read.dto';
 
 export class ManufacturerProfileReadDTO {
   id: string;

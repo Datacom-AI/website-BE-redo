@@ -4,7 +4,6 @@ import {
   IsOptional,
   IsEmail,
   IsUrl,
-  IsInt,
 } from 'class-validator';
 
 export class CompanyInformationCreateDTO {

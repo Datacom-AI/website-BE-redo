@@ -1,4 +1,4 @@
-export class NotificationPreferencesReadDTO {
+export class PreferencesNotificationReadDTO {
   id: string;
 
   emailNotifications: boolean;

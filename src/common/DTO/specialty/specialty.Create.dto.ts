@@ -1,11 +1,11 @@
 import { IsNotEmpty, IsString, IsUUID } from 'class-validator';
 
-export class CompanyTagCreateDTO {
+export class SpecialtyCreateDTO {
   @IsNotEmpty()
   @IsString()
   name: string;
 
   @IsNotEmpty()
   @IsUUID()
-  companyId: string;
+  manufacturingCapabilityId: string;
 }

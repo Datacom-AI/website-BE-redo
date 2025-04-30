@@ -1,5 +1,5 @@
-import { MaterialHandleReadDTO } from './materialHandleRead.dto';
-import { SpecialtyReadDTO } from './specialtyRead.dto';
+import { MaterialHandleReadDTO } from '../others/materialHandle.Read.dto';
+import { SpecialtyReadDTO } from '../specialty/specialty.Read.dto';
 
 export class ManufacturingCapabilityReadDTO {
   id: string;

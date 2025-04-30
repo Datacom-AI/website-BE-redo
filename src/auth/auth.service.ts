@@ -31,7 +31,6 @@ export class AuthService {
     const userData = {
       ...registerPayload,
       role: registerPayload.role as unknown as UserRole,
-      status: registerPayload.status as unknown as Status,
       password: hashedPassword,
     };
 
