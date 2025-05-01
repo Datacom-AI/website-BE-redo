@@ -30,6 +30,13 @@ model User {
   bannerImageUrl String?
   professionalBio String?
   socialLinks Social[]
+
+  /* 
+    PASSWORD RESET
+  */
+
+  // refer to PasswordResetToken (one-to-many)
+  passwordResetToken PasswordResetToken[]
   
   /* 
     CORE RELATIONSHIPS 
@@ -589,6 +596,24 @@ model UserMatchStatus {
   @@index([matchId])
   @@index([userId, status])
   @@map("user_match_status")
+}
+
+model PasswordResetToken {
+  id String @id @default(uuid()) @db.Uuid
+  token String @unique
+
+  userId String @db.Uuid
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  expiresAt DateTime
+  isUsed Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([token])
+  @@map("password_reset_tokens")
 }
 
 model Admin {

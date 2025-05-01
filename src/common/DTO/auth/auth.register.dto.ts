@@ -8,7 +8,7 @@ import {
 import { UserRole } from 'generated/prisma';
 import { ArePasswordMatching } from 'src/common/decorators/passwordMatching.decorator';
 
-export class AuthRegisterUserDTO {
+export class AuthRegisterDTO {
   @IsNotEmpty()
   @IsString()
   name: string;
@@ -27,12 +27,4 @@ export class AuthRegisterUserDTO {
     message: 'Passwords do not match',
   })
   confirmPassword: string;
-
-  @IsEnum(UserRole)
-  role: UserRole;
-
-  @IsOptional()
-  @IsString()
-  @IsNotEmpty()
-  companyName?: string;
 }

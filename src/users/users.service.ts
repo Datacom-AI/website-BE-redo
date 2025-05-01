@@ -60,7 +60,7 @@ export class UserService {
       });
 
       if (!user) {
-        throw new NotFoundException('User not found');
+        throw new NotFoundException('User with email not found');
       }
 
       return user;
@@ -126,11 +126,10 @@ export class UserService {
     const validateUser = await this.prisma.user.findUnique({
       where: {
         id: user.id,
-        username: user.username,
+        name: user.name,
         email: user.email,
         password: user.password,
         role: user.role,
-        companyName: user.companyName,
       },
     });
 

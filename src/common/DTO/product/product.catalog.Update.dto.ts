@@ -11,7 +11,7 @@ import {
 } from 'class-validator';
 import { UnitType, ProductType, LeadTimeUnit } from 'generated/prisma';
 
-export class ProductCatalogReadDTO {
+export class ProductCatalogUpdateDTO {
   @IsOptional()
   @IsString()
   @IsNotEmpty()

@@ -33,10 +33,11 @@ export class JwtAccessTokenStrategy extends PassportStrategy(Strategy, 'jwt') {
 
       return user;
     } catch (error) {
-      throw new BadRequestException('User not found', {
-        cause: error,
-        description: 'Invalid',
-      });
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      console.log('Error validating user from token payload', error);
+      throw new BadRequestException('Invalid token or user data');
     }
   }
 }
