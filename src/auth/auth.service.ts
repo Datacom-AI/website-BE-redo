@@ -10,7 +10,7 @@ import * as crypto from 'crypto';
 
 import { Status, UserRole, User, PasswordResetToken } from 'generated/prisma';
 import { PrismaService } from 'src/prisma.service';
-import { Prisma, PrismaClient } from 'generated/prisma';
+import { Prisma } from 'generated/prisma';
 
 import { AuthRegisterDTO } from 'src/common/DTO/auth/auth.register.dto';
 import { AuthLoginDTO } from 'src/common/DTO/auth/auth.login.dto';
@@ -161,7 +161,7 @@ export class AuthService {
 
     type PasswordResetTokenWithUser = Prisma.PasswordResetTokenGetPayload<{
       include: { user: true };
-    }>;
+    }>; // fixing type error
 
     let resetTokenRecord: PasswordResetTokenWithUser | null = null;
     try {
