@@ -10,27 +10,23 @@ import { ArePasswordMatching } from 'src/common/decorators/passwordMatching.deco
 export class UserUpdateCredentialDTO {
   @IsOptional()
   @IsString()
-  @IsNotEmpty()
   name?: string;
 
   @IsOptional()
-  @IsNotEmpty()
   @IsEmail()
-  email: string;
+  email?: string;
 
-  @IsString()
   @IsOptional()
+  @IsString()
   oldPassword?: string;
 
   @IsString()
-  @IsOptional()
-  @ValidateIf((o) => o.oldPassword)
+  @ValidateIf((o) => o.oldPassword !== undefined)
   @IsNotEmpty()
   newPassword?: string;
 
   @IsString()
-  @IsOptional()
-  @ValidateIf((o) => o.oldPassword)
+  @ValidateIf((o) => o.oldPassword !== undefined)
   @IsNotEmpty()
   @ArePasswordMatching('newPassword', { message: 'Passwords do not match' })
   confirmPassword?: string;

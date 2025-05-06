@@ -28,12 +28,8 @@ model User {
   /* 
     PASSWORD RESET
   */
-
   passwordResetToken PasswordResetToken[]
-  
-  /* 
-    CORE RELATIONSHIPS 
-  */
+
   companyInfo CompanyInformation?
 
   notificationPreferences NotificationPreferences?
@@ -42,9 +38,6 @@ model User {
 
   applicationPreferences ApplicationPreferences?
 
-  /* 
-    ROLE-BASED RELATIONSHIPS
-  */
   manufacturerProfile ManufacturerProfile?
   brandProfile BrandProfile?
   retailerProfile RetailerProfile?
@@ -750,9 +743,7 @@ model Match {
   userTwoId String @db.Uuid
   userTwo User @relation("UserTwoMatches", fields: [userTwoId], references: [id], onDelete: Cascade)
 
-  description String?
-  matchPercentage Float?
-  establishedAt DateTime?
+  establishedAt DateTime? // when the match was accepted
   terminatedAt DateTime?
 
   userStatus UserMatchStatus[] @relation("MatchUserStatus")
@@ -775,9 +766,8 @@ model UserMatchStatus {
   matchId String @db.Uuid
   match Match @relation("MatchUserStatus", fields: [matchId], references: [id], onDelete: Cascade)
 
-  status MatchingStatus @default(pending)
-
   isStarred Boolean @default(false)
+  status MatchingStatus @default(pending)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

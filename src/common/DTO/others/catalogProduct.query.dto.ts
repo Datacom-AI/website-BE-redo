@@ -8,6 +8,7 @@ import {
   IsEnum,
   Min,
   Max,
+  IsIn,
 } from 'class-validator';
 import { ProductType, UnitType } from 'generated/prisma';
 import { Type } from 'class-transformer';
@@ -66,5 +67,6 @@ export class CatalogProductQueryDTO {
 
   @IsOptional()
   @IsString()
+  @IsIn(['asc', 'desc'])
   orderDirection?: 'asc' | 'desc' = 'asc'; // sort direction: "asc" or "desc"
 }

@@ -1,35 +1,30 @@
-import { IsString, IsOptional, IsNotEmpty, IsInt } from 'class-validator';
+import { IsString, IsOptional, IsInt } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class InventoryItemsUpdateDTO {
-  // ID is in the route parameter
-  // userId and manufacturerProfileId are excluded
-
   @IsOptional()
   @IsString()
-  @IsNotEmpty()
   itemName?: string;
 
   @IsOptional()
   @IsString()
-  @IsNotEmpty()
   itemCategory?: string;
 
   @IsOptional()
+  @Type(() => Number)
   @IsInt()
-  @IsNotEmpty() // Need IsNotEmpty if stock cannot be updated to null/empty string (which is true for int)
-  currentStock?: number; // Allow partial update of stock
+  currentStock?: number;
 
   @IsOptional()
+  @Type(() => Number)
   @IsInt()
   maximumStock?: number;
 
   @IsOptional()
   @IsString()
-  @IsNotEmpty()
   storageLocation?: string;
 
   @IsOptional()
   @IsString()
-  @IsNotEmpty()
   description?: string;
 }

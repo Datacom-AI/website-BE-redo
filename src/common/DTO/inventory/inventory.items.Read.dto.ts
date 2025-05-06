@@ -5,9 +5,9 @@ export class InventoryItemsReadDTO {
   itemCategory: string;
   itemSKU: string;
   currentStock: number;
-  maximumStock?: number;
-  storageLocation?: string;
-  description?: string;
+  maximumStock?: number | null;
+  storageLocation?: string | null;
+  description?: string | null;
 
   createdAt: Date;
   updatedAt: Date;

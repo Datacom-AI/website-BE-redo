@@ -4,13 +4,13 @@ import { MatchUserStatusReadDTO } from './match.userStatus.Read.dto';
 export class MatchReadDTO {
   id: string;
 
-  brand: UserReadMinimalDTO;
-  manufacturer: UserReadMinimalDTO;
+  userOne: UserReadMinimalDTO;
+  userTwo: UserReadMinimalDTO;
 
-  description?: string;
-  matchPercentage?: number;
+  establishedAt?: Date | null;
+  terminatedAt?: Date | null;
 
-  currentUserStatus?: MatchUserStatusReadDTO;
+  currentUserStatus?: MatchUserStatusReadDTO | null;
 
   createdAt: Date;
   updatedAt: Date;

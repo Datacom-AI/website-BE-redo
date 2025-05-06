@@ -3,14 +3,15 @@ import { UserRole } from 'generated/prisma';
 export class CompanyInformationReadPublicDTO {
   id: string;
   name: string;
-  companyWebsite?: string;
-  addressCity?: string;
-  addressCountry?: string;
+
+  companyWebsite?: string | null;
+  addressCity?: string | null;
+  addressCountry?: string | null;
 }
 
 export class SocialReadDTO {
   id: string;
-  name: string;
+  platform: string;
   url: string;
 }
 
@@ -32,19 +33,19 @@ export class UserReadPublicDTO {
   name: string;
   role: UserRole;
 
-  jobTitle?: string;
-  profileImageUrl?: string;
-  bannerImageUrl?: string;
-  professionalBio?: string;
+  jobTitle?: string | null;
+  profileImageUrl?: string | null;
+  bannerImageUrl?: string | null;
+  professionalBio?: string | null;
 
-  companyInfo?: CompanyInformationReadPublicDTO;
-  socialLinks?: SocialReadDTO[];
+  companyInfo?: CompanyInformationReadPublicDTO | null;
+  socialLinks?: SocialReadDTO[] | null;
 
   isProfilePublic: boolean;
 
   createdAt: Date;
 
-  manufacturerProfile?: ManufacturerProfileReadPublicDTO;
-  brandProfile?: BrandProfileReadPublicDTO;
-  retailerProfile?: RetailerProfileReadPublicDTO;
+  manufacturerProfile?: ManufacturerProfileReadPublicDTO | null;
+  brandProfile?: BrandProfileReadPublicDTO | null;
+  retailerProfile?: RetailerProfileReadPublicDTO | null;
 }

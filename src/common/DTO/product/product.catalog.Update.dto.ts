@@ -7,21 +7,26 @@ import {
   IsBoolean,
   IsEnum,
   IsUUID,
-  IsNotEmpty,
 } from 'class-validator';
 import { UnitType, ProductType, LeadTimeUnit } from 'generated/prisma';
+import { Type } from 'class-transformer';
 
 export class ProductCatalogUpdateDTO {
   @IsOptional()
   @IsString()
-  @IsNotEmpty()
   name?: string;
 
   @IsOptional()
-  @IsUUID()
+  @IsUUID('4')
   productCategoryId?: string;
 
   @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  minimumOrderQuantity?: number;
+
+  @IsOptional()
+  @Type(() => Number)
   @IsInt()
   dailyCapacity?: number;
 
@@ -30,11 +35,12 @@ export class ProductCatalogUpdateDTO {
   unitType?: UnitType;
 
   @IsOptional()
+  @Type(() => Number)
   @IsInt()
-  @IsNotEmpty()
   currentAvailableStock?: number;
 
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   pricePerUnit?: number;
 
@@ -44,7 +50,6 @@ export class ProductCatalogUpdateDTO {
 
   @IsOptional()
   @IsString()
-  @IsNotEmpty()
   leadTime?: string;
 
   @IsOptional()
@@ -53,15 +58,24 @@ export class ProductCatalogUpdateDTO {
 
   @IsOptional()
   @IsString()
-  @IsNotEmpty()
   description?: string;
 
   @IsOptional()
   @IsUrl()
-  @IsNotEmpty()
   imageUrl?: string;
 
   @IsOptional()
+  @Type(() => Boolean)
   @IsBoolean()
   isSustainableProduct?: boolean;
+
+  @IsOptional()
+  @Type(() => Boolean)
+  @IsBoolean()
+  isBestSeller?: boolean;
+
+  @IsOptional()
+  @Type(() => Boolean)
+  @IsBoolean()
+  isPopular?: boolean;
 }

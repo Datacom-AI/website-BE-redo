@@ -1,57 +1,49 @@
 import {
   IsEmail,
   IsEnum,
-  IsNotEmpty,
   IsNumber,
   IsOptional,
   IsString,
   IsUUID,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 import { SupplierStatus } from 'generated/prisma';
 
 export class SupplierUpdateDTO {
   @IsOptional()
   @IsString()
-  @IsNotEmpty()
   name?: string;
 
   @IsOptional()
-  @IsUUID()
+  @IsUUID('4')
   supplierCategoryId?: string;
 
   @IsOptional()
   @IsString()
-  @IsNotEmpty()
   contactPerson?: string;
 
   @IsOptional()
   @IsEmail()
-  @IsNotEmpty()
   contactEmail?: string;
 
   @IsOptional()
   @IsString()
-  @IsNotEmpty()
   contactPhone?: string;
 
   @IsOptional()
   @IsString()
-  @IsNotEmpty()
   city?: string;
 
   @IsOptional()
   @IsString()
-  @IsNotEmpty()
   country?: string;
 
   @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  fullAdderess?: string;
+  fullAddress?: string;
 
   @IsOptional()
   @IsString()
-  @IsNotEmpty()
   description?: string;
 
   @IsOptional()
@@ -59,11 +51,11 @@ export class SupplierUpdateDTO {
   status?: SupplierStatus;
 
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   reliabilityRating?: number;
 
   @IsOptional()
   @IsString()
-  @IsNotEmpty()
   leadTime?: string;
 }

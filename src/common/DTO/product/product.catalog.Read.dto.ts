@@ -3,6 +3,7 @@ import { LeadTimeUnit, ProductType, UnitType } from 'generated/prisma';
 
 export class ProductCatalogReadDTO {
   id: string;
+  manufacturerProfileId: string;
 
   productCategory: ProductCategoryReadDTO;
 
@@ -12,12 +13,17 @@ export class ProductCatalogReadDTO {
   currentAvailableStock: number;
   pricePerUnit: number;
   productType: ProductType;
-  leadTime?: string;
+  leadTime?: string | null;
   leadTimeUnit: LeadTimeUnit;
-  description?: string;
-  imageUrl?: string;
+
+  description?: string | null;
+  imageUrl?: string | null;
+
   isSustainableProduct: boolean;
   productSKU: string;
+
+  isBestSeller: boolean;
+  isPopular: boolean;
 
   createdAt: Date;
   updatedAt: Date;

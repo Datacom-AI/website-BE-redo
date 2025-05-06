@@ -1,4 +1,4 @@
-import { MaterialHandleReadDTO } from '../others/materialHandle.Read.dto';
+import { MaterialHandleReadDTO } from '../materialHandle/materialHandle.Read.dto';
 import { SpecialtyReadDTO } from '../specialty/specialty.Read.dto';
 
 export class ManufacturingCapabilityReadDTO {

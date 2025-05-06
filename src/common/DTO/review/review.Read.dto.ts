@@ -1,17 +1,15 @@
-import { last } from 'rxjs';
+import {} from 'class-validator';
 
 export class ReviewAuthorReadDTO {
   id: string;
-
   name: string;
-  profileImageUrl?: string;
+  profileImageUrl?: string | null;
 }
 
 export class ReviewProductReadDTO {
   id: string;
-
   name: string;
-  imageUrl?: string; // product image
+  imageUrl?: string | null;
 }
 
 export class ReviewReadDTO {
@@ -20,8 +18,9 @@ export class ReviewReadDTO {
   author: ReviewAuthorReadDTO;
   product: ReviewProductReadDTO;
 
-  rating?: number;
-  comment?: string;
+  rating?: number | null;
+
+  comment?: string | null;
 
   createdAt: Date;
   updatedAt: Date;

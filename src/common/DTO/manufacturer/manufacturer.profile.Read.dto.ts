@@ -2,8 +2,14 @@ import { ManufacturingCapabilityReadDTO } from '../manufacturingCapability/manuf
 
 export class ManufacturerProfileReadDTO {
   id: string;
+  userId: string;
 
-  manufacturingCapability?: ManufacturingCapabilityReadDTO;
+  manufacturingCapability?: ManufacturingCapabilityReadDTO | null;
+
+  productsCount?: number;
+  inventoryItemsCount?: number;
+  certificationCount?: number;
+  productionLinesCount?: number;
 
   isVerifiedManufacturer: boolean;
   showProductionCapacity: boolean;

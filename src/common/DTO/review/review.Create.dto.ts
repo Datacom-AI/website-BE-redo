@@ -7,6 +7,7 @@ import {
   Max,
   Min,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class ReviewCreateDTO {
   @IsNotEmpty()
@@ -14,6 +15,7 @@ export class ReviewCreateDTO {
   catalogProductId: string;
 
   @IsOptional()
+  @Type(() => Number)
   @IsInt()
   @Min(1)
   @Max(5)
@@ -21,6 +23,5 @@ export class ReviewCreateDTO {
 
   @IsOptional()
   @IsString()
-  @IsNotEmpty()
   comment?: string;
 }

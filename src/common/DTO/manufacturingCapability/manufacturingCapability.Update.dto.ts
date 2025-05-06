@@ -1,10 +1,4 @@
-import {
-  IsOptional,
-  IsInt,
-  IsNumber,
-  IsString,
-  IsNotEmpty,
-} from 'class-validator';
+import { IsOptional, IsInt, IsNumber } from 'class-validator';
 
 export class ManufacturingCapabilityUpdateDTO {
   @IsOptional()
@@ -14,9 +8,4 @@ export class ManufacturingCapabilityUpdateDTO {
   @IsOptional()
   @IsNumber()
   minimumOrderQuantity?: number;
-
-  @IsOptional()
-  @IsString()
-  @IsNotEmpty()
-  certificationCompliance?: string;
 }

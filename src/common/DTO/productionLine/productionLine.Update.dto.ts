@@ -1,35 +1,40 @@
 import {
   IsDateString,
-  IsIn,
   IsInt,
-  IsNotEmpty,
   IsNumber,
   IsOptional,
   IsString,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class ProductionLineUpdateDTO {
   @IsOptional()
   @IsString()
-  @IsNotEmpty()
   name?: string;
 
   @IsOptional()
   @IsString()
-  @IsNotEmpty()
   lineType?: string;
 
   @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  capacityValue?: number;
+
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
+  capacityUnit?: string;
+
+  @IsOptional()
+  @IsString()
   initialStatus?: string;
 
   @IsOptional()
   @IsString()
-  @IsNotEmpty()
   operatorAssigned?: string;
 
   @IsOptional()
+  @Type(() => Number)
   @IsInt()
   targetEfficiency?: number;
 
@@ -42,6 +47,7 @@ export class ProductionLineUpdateDTO {
   operationalSince?: string;
 
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   energyConsumptionKwh?: number;
 }

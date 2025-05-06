@@ -1,13 +1,13 @@
 export class SecuritySettingsReadDTO {
   id: string;
+  userId: string;
 
-  twoFactorAuthenticationEnabled?: boolean;
-  twoFactorConfirmed?: boolean;
-
-  alertNewLogin?: boolean;
-  alertNewDeviceLogin?: boolean;
-  alertPasswordChange?: boolean;
-  alertSuspiciousActivity?: boolean;
+  twoFactorAuthentication: boolean;
+  twoFactorConfirmed: boolean;
+  alertNewLogin: boolean;
+  alertNewDeviceLogin: boolean;
+  alertPasswordChanges: boolean;
+  alertSuspiciousActivity: boolean;
 
   createdAt: Date;
   updatedAt: Date;

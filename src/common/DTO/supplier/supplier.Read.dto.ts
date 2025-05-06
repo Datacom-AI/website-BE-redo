@@ -1,9 +1,12 @@
 import { SupplierStatus } from 'generated/prisma';
+
 import { SupplierCategoryReadDTO } from './supplier.category.Read.dto';
 import { SupplierMaterialReadDTO } from './supplier.material.Read.dto';
 
 export class SupplierReadDTO {
   id: string;
+
+  userId: string;
 
   name: string;
 
@@ -14,11 +17,12 @@ export class SupplierReadDTO {
   contactPhone: string;
   city: string;
   country: string;
-  fullAdderess?: string;
-  description?: string;
+
+  fullAddress?: string | null;
+  description?: string | null;
   status: SupplierStatus;
-  reliabilityRating?: number;
-  leadTime?: string;
+  reliabilityRating?: number | null;
+  leadTime?: string | null;
 
   materials: SupplierMaterialReadDTO[];
 

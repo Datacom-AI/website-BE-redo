@@ -7,7 +7,7 @@ export class UserReadMinimalDTO {
   name: string;
 
   role: UserRole;
-  profileImageUrl: string;
+  profileImageUrl?: string | null;
 
-  companyInfo?: CompanyInformationMinimalReadDTO;
+  companyInfo?: CompanyInformationMinimalReadDTO | null;
 }

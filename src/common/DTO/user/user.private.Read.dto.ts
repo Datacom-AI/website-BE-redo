@@ -14,24 +14,20 @@ export class UserReadPrivateDTO {
   name: string;
   role: UserRole;
   status: Status;
-
-  jobTitle?: string;
-  profileImageUrl?: string;
-  bannerImageUrl?: string;
-  professionalBio?: string;
-
-  companyInfo?: CompanyInformationReadDTO;
-  notificationPreferences?: PreferencesNotificationReadDTO;
-  securitySettings?: SecuritySettingsReadDTO;
-  applicationPreferences?: PreferencesApplicationReadDTO;
-  socialLinks?: SocialReadDTO[];
-
-  manufacturerProfile?: ManufacturerProfileReadDTO;
-  brandProfile?: BrandProfileReadDTO;
-  retailerProfile?: RetailerProfileReadDTO;
-
+  jobTitle?: string | null;
+  profileImageUrl?: string | null;
+  bannerImageUrl?: string | null;
+  professionalBio?: string | null;
+  lastLogin?: Date | null;
+  companyInfo?: CompanyInformationReadDTO | null;
+  notificationPreferences?: PreferencesNotificationReadDTO | null;
+  securitySettings?: SecuritySettingsReadDTO | null;
+  applicationPreferences?: PreferencesApplicationReadDTO | null;
+  socialLinks?: SocialReadDTO[] | null;
+  manufacturerProfile?: ManufacturerProfileReadDTO | null;
+  brandProfile?: BrandProfileReadDTO | null;
+  retailerProfile?: RetailerProfileReadDTO | null;
   isProfilePublic: boolean;
-
   createdAt: Date;
   updatedAt: Date;
 }

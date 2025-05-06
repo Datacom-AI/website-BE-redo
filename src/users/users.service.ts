@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { User } from 'generated/prisma';
 import * as bcryptjs from 'bcryptjs';
-import { UserRawDTO } from 'src/common/DTO';
+import { UserRawDTO } from 'src/common/DTO/user/user.raw.dto';
 import { UserUpdateCredentialDTO } from 'src/common/DTO/user/user.credential.dto';
 import { PrismaService } from 'src/prisma.service';
 
@@ -22,7 +22,7 @@ export class UserService {
   }
 
   // get user by id
-  async findOne(id: string) {
+  async findOne(id: string): Promise<User> {
     if (!id) {
       throw new Error('User ID is required');
     }
@@ -159,7 +159,9 @@ export class UserService {
         userData.newPassword === userData.confirmPassword
       ) {
         const salt: string = await bcryptjs.genSalt(10);
-        hashedPassword = await bcryptjs.hash(userData.newPassword, salt);
+        if (userData.newPassword) {
+          hashedPassword = await bcryptjs.hash(userData.newPassword, salt);
+        }
       } else {
         throw new BadRequestException('Invalid password');
       }

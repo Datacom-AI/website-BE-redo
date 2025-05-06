@@ -6,6 +6,7 @@ import {
   IsString,
   IsUUID,
   Min,
+  IsIn,
 } from 'class-validator';
 import { SupplierStatus } from 'generated/prisma';
 
@@ -41,8 +42,8 @@ export class SupplierQueryDTO {
   @IsOptional()
   @Type(() => Number)
   @IsInt()
-  @Min(1)
-  page?: number = 1;
+  @Min(0)
+  offset?: number = 0;
 
   @IsOptional()
   @Type(() => Number)
@@ -56,5 +57,6 @@ export class SupplierQueryDTO {
 
   @IsOptional()
   @IsString()
+  @IsIn(['asc', 'desc'])
   orderDirection?: 'asc' | 'desc' = 'asc';
 }

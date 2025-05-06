@@ -9,7 +9,7 @@ import { MatchingStatus } from 'generated/prisma';
 
 export class MatchUserStatusUpdateDTO {
   @IsNotEmpty()
-  @IsUUID()
+  @IsUUID('4')
   matchId: string;
 
   @IsOptional()

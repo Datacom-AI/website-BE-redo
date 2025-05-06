@@ -1,22 +1,27 @@
-import { IsNotEmpty } from 'class-validator';
-
 import { CompanyTagReadDTO } from './company.tag.Read.dto';
 
 export class CompanyInformationReadDTO {
   id: string;
+  userId: string;
 
   name: string;
-  companyEmail?: string;
-  phoneNumber?: string;
-  companyWebsite?: string;
-  establishedYear?: number;
+  companyEmail?: string | null;
+  phoneNumber?: string | null;
+  companyWebsite?: string | null;
+  establishedYear?: number | null;
 
-  addressStreet?: string;
-  addressCity?: string;
-  addressState?: string;
-  addressZipcode?: string;
+  industry?: string | null;
+  companySize?: string | null;
+  speciallization?: string | null;
+  companySubtitle?: string | null;
 
-  companyDescription?: string;
+  addressStreet?: string | null;
+  addressCity?: string | null;
+  addressState?: string | null;
+  addressZipCode?: string | null;
+  addressCountry?: string | null;
+
+  companyDescription?: string | null;
 
   tags?: CompanyTagReadDTO[];
 

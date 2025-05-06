@@ -7,6 +7,10 @@ export class SecuritySettingsUpdateDTO {
 
   @IsOptional()
   @IsBoolean()
+  twoFactorConfirmed?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
   alertNewLogin?: boolean;
 
   @IsOptional()
@@ -15,7 +19,7 @@ export class SecuritySettingsUpdateDTO {
 
   @IsOptional()
   @IsBoolean()
-  alertPasswordChange?: boolean;
+  alertPasswordChanges?: boolean;
 
   @IsOptional()
   @IsBoolean()

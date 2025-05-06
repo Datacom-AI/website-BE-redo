@@ -6,6 +6,7 @@ import {
   IsString,
   IsUUID,
   Min,
+  IsIn,
 } from 'class-validator';
 import { OrderStatus } from 'generated/prisma';
 
@@ -20,11 +21,17 @@ export class OrderQueryDTO {
 
   @IsOptional()
   @Type(() => Date)
-  startDate?: Date;
+  createdAtFrom?: Date;
 
   @IsOptional()
   @Type(() => Date)
-  endDate?: Date;
+  createdAtTo?: Date;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  offset?: number = 0;
 
   @IsOptional()
   @Type(() => Number)
@@ -38,5 +45,6 @@ export class OrderQueryDTO {
 
   @IsOptional()
   @IsString()
+  @IsIn(['asc', 'desc'])
   orderDirection?: 'asc' | 'desc' = 'asc';
 }

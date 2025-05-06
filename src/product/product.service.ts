@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Product } from 'generated/prisma';
+import { CatalogProduct } from 'generated/prisma';
 import { PrismaService } from 'src/prisma.service';
 
 @Injectable()
@@ -12,19 +12,24 @@ export class ProductService {
   constructor(private prisma: PrismaService) {}
 
   // get all products
-  async getAllProducts(): Promise<Product[]> {
-    const products = await this.prisma.product.findMany();
+  async getAllProducts(): Promise<CatalogProduct[]> {
+    const products = await this.prisma.catalogProduct.findMany();
     return products;
   }
 
   // get product by id
-  async getProductById(id: string): Promise<Product> {
+  async getProductById(id: string): Promise<CatalogProduct> {
     if (!id) {
       throw new NotFoundException('Product ID is required');
     }
     try {
-      const product = await this.prisma.product.findUnique({
-        where: { id },
+      const product = await this.prisma.catalogProduct.findFirst({
+        where: {
+          id,
+        },
+        include: {
+          productCategory: true,
+        },
       });
 
       if (!product) {
@@ -42,16 +47,16 @@ export class ProductService {
   }
 
   // create product
-  async createProduct(data: Product): Promise<Product> {
+  async createProduct(data: CatalogProduct): Promise<CatalogProduct> {
     if (!data) {
       throw new BadRequestException('Product data is required');
     }
 
     const { ...productData } = data;
-    let newRecord: Product;
+    let newRecord: CatalogProduct;
 
     try {
-      newRecord = await this.prisma.product.create({
+      newRecord = await this.prisma.catalogProduct.create({
         data: {
           ...productData,
         },

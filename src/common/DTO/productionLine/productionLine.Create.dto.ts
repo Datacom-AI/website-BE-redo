@@ -6,25 +6,36 @@ import {
   IsOptional,
   IsString,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class ProductionLineCreateDTO {
   @IsNotEmpty()
   @IsString()
   name: string;
 
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
-  lineType: string;
+  lineType?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  capacityValue?: number;
+
+  @IsOptional()
+  @IsString()
+  capacityUnit?: string;
 
   @IsOptional()
   @IsString()
   initialStatus?: string;
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsString()
   operatorAssigned: string;
 
   @IsOptional()
+  @Type(() => Number)
   @IsInt()
   targetEfficiency?: number;
 
@@ -37,6 +48,7 @@ export class ProductionLineCreateDTO {
   operationalSince?: string;
 
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   energyConsumptionKwh?: number;
 }
