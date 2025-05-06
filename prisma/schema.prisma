@@ -8,629 +8,632 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// User model representing all users (manufacturer, brand, retailer)
 model User {
-  id String @id @default(uuid()) @db.Uuid
-  email String @unique
-  name String
-  password String
-
-  role UserRole
-  status Status @default(online)
-
-  lastLogin DateTime?
-
-  jobTitle String?
+  id            String           @id @default(uuid()) @db.Uuid
+  email         String           @unique
+  name          String
+  password      String
+  role          UserRole
+  presenceStatus PresenceStatus   @default(offline)
+  accountStatus AccountStatus    @default(pending)
+  lastLogin     DateTime?
+  jobTitle      String?
   profileImageUrl String?
   bannerImageUrl String?
   professionalBio String?
-  socialLinks Social[]
-
-  /* 
-    PASSWORD RESET
-  */
+  socialLinks   SocialLink[]
   passwordResetToken PasswordResetToken[]
-
-  companyInfo CompanyInformation?
-
+  companyInfo   CompanyInformation?
   notificationPreferences NotificationPreferences?
-
   securitySettings SecuritySettings?
-
   applicationPreferences ApplicationPreferences?
-
-  manufacturerProfile ManufacturerProfile?
-  brandProfile BrandProfile?
-  retailerProfile RetailerProfile?
-
-  orders Order[]
-
+  profile       Profile?
+  orders        Order[]
   reviewsWritten Review[]
-
   addedSuppliers Supplier[]
+  userOneConnections Connection[] @relation("UserOneConnections")
+  userTwoConnections Connection[] @relation("UserTwoConnections")
+  userOnePartnerships Partnership[] @relation("UserOnePartnerships")
+  userTwoPartnerships Partnership[] @relation("UserTwoPartnerships")
+  sentMessages  Message[]        @relation("SenderMessages")
+  conversationsOne Conversation[] @relation("UserOneConversations")
+  conversationsTwo Conversation[] @relation("UserTwoConversations")
+  notifications Notification[]
+  isProfilePublic Boolean        @default(false)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  deletedAt     DateTime?        // Soft delete
 
-  userOneMatches Match[] @relation("UserOneMatches")
-  userTwoMatches Match[] @relation("UserTwoMatches")
-
-  userMatchStatus UserMatchStatus[] @relation("UserMatchStatuses")
-
-  /*
-    RELATIONSHIPS
-  */
-  // When User's role is BRAND
-  brandPartnershipsWithRetailers RetailerBrandPartnership[] @relation("RetailerBrandPartnerships_Brand")
-  brandPartnershipsWithManufacturers ManufacturerBrandPartnership[] @relation("ManufacturerBrandPartnerships_Brand")
-
-  // When User's role is RETAILER
-  retailerPartnershipsWithBrands RetailerBrandPartnership[] @relation("RetailerBrandPartnerships_Retailer")
-  retailerPartnershipsWithManufacturers ManufacturerRetailerPartnership[] @relation("ManufacturerRetailerPartnerships_Retailer")
-
-  // When User's role is MANUFACTURER
-  manufacturerPartnershipsWithBrands    ManufacturerBrandPartnership[]    @relation("ManufacturerBrandPartnerships_Manufacturer")
-  manufacturerPartnershipsWithRetailers ManufacturerRetailerPartnership[] @relation("ManufacturerRetailerPartnerships_Manufacturer")
-
-  isProfilePublic Boolean @default(false)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
+  @@index([email])
+  @@index([role, accountStatus])
   @@map("users")
 }
 
-model ManufacturerProfile {
-  id String @id @default(uuid()) @db.Uuid
+// Profile model consolidating role-specific profiles
+model Profile {
+  id            String           @id @default(uuid()) @db.Uuid
+  userId        String           @unique @db.Uuid
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role          UserRole
+  manufacturerDetails ManufacturerDetails?
+  brandDetails  BrandDetails?
+  retailerDetails RetailerDetails?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  deletedAt     DateTime?        // Soft delete
 
-  userId String @unique @db.Uuid
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId])
+  @@index([role])
+  @@map("profiles")
+}
 
-  products CatalogProduct[]
-
-  inventoryItems InventoryItems[]
-
-  certification Certification[]
-
+// Manufacturer-specific details
+model ManufacturerDetails {
+  id            String           @id @default(uuid()) @db.Uuid
+  profileId     String           @unique @db.Uuid
+  profile       Profile          @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  products      CatalogProduct[]
+  inventoryItems InventoryItem[]
+  certifications Certification[]
   productionLines ProductionLine[]
-
   manufacturingCapability ManufacturingCapability?
-
   isVerifiedManufacturer Boolean @default(false)
   showProductionCapacity Boolean @default(false)
   showCertifications Boolean @default(false)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  deletedAt     DateTime?        // Soft delete
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([userId])
-  @@map("manufacturer_profiles")
+  @@index([profileId])
+  @@map("manufacturer_details")
 }
 
-model BrandProfile {
-  id String @id @default(uuid()) @db.Uuid
-
-  userId String @unique @db.Uuid
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  growthRateYoY Float?
-  marketPenetrationPercentage Float?
-  marketSharePercentage Float?
-  estimatedShopperReachK Int?
-  totalRetailerSales Float?
-
-  productFeatures String[]
-  brandCertifications String[]
-  sustainabilityClaims String[]
-
-  totalSocialMediaFollowers Int?
-  averageEngagementRate Float?
-
+// Brand-specific details
+model BrandDetails {
+  id            String           @id @default(uuid()) @db.Uuid
+  profileId     String           @unique @db.Uuid
+  profile       Profile          @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  growthRateYoY Float?           @default(0)
+  marketPenetrationPercentage Float? @default(0)
+  marketSharePercentage Float?   @default(0)
+  estimatedShopperReachK Int?    @default(0)
+  totalRetailerSales Float?     @default(0)
+  productFeatures ProductFeature[]
+  brandCertifications BrandCertification[]
+  sustainabilityClaims SustainabilityClaim[]
+  totalSocialMediaFollowers Int? @default(0)
+  averageEngagementRate Float?   @default(0)
   marketingCampaigns MarketingCampaign[]
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  deletedAt     DateTime?        // Soft delete
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([userId])
-  @@map("brand_profiles")
+  @@index([profileId])
+  @@map("brand_details")
 }
 
+// Retailer-specific details
+model RetailerDetails {
+  id            String           @id @default(uuid()) @db.Uuid
+  profileId     String           @unique @db.Uuid
+  profile       Profile          @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  businessType  String?
+  storeFormat   String?
+  averageStoreSize String?
+  customerBaseDescription String?
+  totalSkus     Int?             @default(0)
+  activeCustomerCount Int?       @default(0)
+  averageMonthlySales Float?     @default(0)
+  salesGrowthRateYoY Float?      @default(0)
+  inventoryInStockPercentage Float? @default(0)
+  fulfillmentPercentage Float?   @default(0)
+  topSellingCategories TopSellingCategory[]
+  customerDemographics CustomerDemographic[]
+  purchaseFrequencies PurchaseFrequency[]
+  storeLocations StoreLocation[]
+  retailerProducts RetailerProduct[]
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  deletedAt     DateTime?        // Soft delete
+
+  @@index([profileId])
+  @@map("retailer_details")
+}
+
+// Marketing campaigns for brands
 model MarketingCampaign {
-  id String @id @default(uuid()) @db.Uuid
-
-  brandProfileId String @db.Uuid
-  brandProfile BrandProfile @relation(fields: [brandProfileId], references: [id], onDelete: Cascade)
-
-  name String
-  description String?
-  startDate DateTime?
-  endDate DateTime?
+  id            String           @id @default(uuid()) @db.Uuid
+  brandDetailsId String          @db.Uuid
+  brandDetails  BrandDetails     @relation(fields: [brandDetailsId], references: [id], onDelete: Cascade)
+  name          String
+  description   String?
+  startDate     DateTime?
+  endDate       DateTime?
   targetAudience String?
-  campaignType CampaignType?
-  status CampaignStatus @default(upcoming)
+  campaignType  CampaignType?
+  status        Status           @default(pending)
+  marketingBudget Float?         @default(0)
+  budgetAllocationJson Json?     @db.JsonB
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  deletedAt     DateTime?        // Soft delete
 
-  marketingBudget Float?
-  budgetAllocationJson Json? @db.JsonB
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([brandProfileId])
+  @@index([brandDetailsId])
   @@map("marketing_campaigns")
 }
 
-model RetailerProfile {
-  id String @id @default(uuid()) @db.Uuid
-
-  userId String @unique @db.Uuid
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  businessType String?
-  storeFormat String?
-  averageStoreSize String?
-  customerBaseDescription String?
-  
-  totalSkus Int?
-  activeCustomerCount Int?
-  averageMonthlySales Float?
-  salesGrowthRateYoY Float?
-  inventoryInStockPercentage Float?
-  fulfillmentPercentage Float?
-
-  topSellingCategoriesJson Json? @db.JsonB
-  customerDemographicsJson Json? @db.JsonB
-  purchaseFrequencyJson Json? @db.JsonB
-
-  storeLocations StoreLocation[]
-  retailerProducts RetailerProduct[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([userId])
-  @@map("retailer_profiles")
-}
-
+// Store locations for retailers
 model StoreLocation {
-  id String @id @default(uuid()) @db.Uuid
-
-  retailerProfileId String @db.Uuid
-  retailerProfile RetailerProfile @relation(fields: [retailerProfileId], references: [id], onDelete: Cascade)
-
-  name String
+  id            String           @id @default(uuid()) @db.Uuid
+  retailerDetailsId String        @db.Uuid
+  retailerDetails RetailerDetails @relation(fields: [retailerDetailsId], references: [id], onDelete: Cascade)
+  name          String
   addressStreet String?
-  addressCity String?
-  addressState String?
+  addressCity   String?
+  addressState  String?
   addressZipCode String?
-  sizeSqFt Int?
-  locationType String?
-  isPrimary Boolean @default(false)
+  sizeSqFt      Int?             @default(0)
+  locationType  String?
+  isPrimary     Boolean          @default(false)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  deletedAt     DateTime?        // Soft delete
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([retailerProfileId])
+  @@index([retailerDetailsId])
   @@map("store_locations")
 }
 
+// Product categories for retailer products
 model RetailerProductCategory {
-   id String @id @default(uuid()) @db.Uuid
-   name String @unique
+  id            String           @id @default(uuid()) @db.Uuid
+  name          String           @unique
+  retailerProducts RetailerProduct[]
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  deletedAt     DateTime?        // Soft delete
 
-   retailerProducts RetailerProduct[]
-
-   createdAt DateTime @default(now())
-   updatedAt DateTime @updatedAt
-
-   @@map("retailer_product_categories")
+  @@map("retailer_product_categories")
 }
 
+// Products managed by retailers
 model RetailerProduct {
-  id String @id @default(uuid()) @db.Uuid
+  id            String           @id @default(uuid()) @db.Uuid
+  retailerDetailsId String        @db.Uuid
+  retailerDetails RetailerDetails @relation(fields: [retailerDetailsId], references: [id], onDelete: Cascade)
+  categoryId    String           @db.Uuid
+  category      RetailerProductCategory @relation(fields: [categoryId], references: [id])
+  catalogProductId String?        @db.Uuid // Link to manufacturer product
+  catalogProduct CatalogProduct? @relation(fields: [catalogProductId], references: [id])
+  sku           String
+  name          String
+  description   String?
+  stockLevel    Int              @default(0)
+  needsRestock  Boolean          @default(false)
+  reorderPoint  Int?             @default(0)
+  price         Float?           @default(0)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  deletedAt     DateTime?        // Soft delete
 
-  retailerProfileId String @db.Uuid
-  retailerProfile RetailerProfile @relation(fields: [retailerProfileId], references: [id], onDelete: Cascade)
-
-  categoryId String @db.Uuid
-  category RetailerProductCategory @relation(fields: [categoryId], references: [id])
-
-  sku String
-  name String
-  description String?
-
-  stockLevel Int @default(0)
-  needsRestock Boolean @default(false)
-  reorderPoint Int?
-  price Float?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([retailerProfileId, sku])
-  @@index([retailerProfileId])
+  @@unique([retailerDetailsId, sku])
+  @@index([retailerDetailsId])
   @@index([categoryId])
+  @@index([catalogProductId])
   @@map("retailer_products")
 }
 
-model RetailerBrandPartnership {
-  id String @id @default(uuid()) @db.Uuid
-
-  retailerUserId String @db.Uuid
-  retailerUser User @relation("RetailerBrandPartnerships_Retailer", fields: [retailerUserId], references: [id], onDelete: Cascade)
-
-  brandUserId String @db.Uuid
-  brandUser User @relation("RetailerBrandPartnerships_Brand", fields: [brandUserId], references: [id], onDelete: Cascade)
-
-  partnershipType String?
+// Consolidated partnership model
+model Partnership {
+  id            String           @id @default(uuid()) @db.Uuid
+  userOneId     String           @db.Uuid
+  userOne       User             @relation("UserOnePartnerships", fields: [userOneId], references: [id], onDelete: Cascade)
+  userTwoId     String           @db.Uuid
+  userTwo       User             @relation("UserTwoPartnerships", fields: [userTwoId], references: [id], onDelete: Cascade)
+  type          PartnershipType
+  partnershipType String?         // Custom type description
   agreementDetails String?
-  isActive Boolean @default(true)
-  notes String?
-
-  partnershipStartDate DateTime?
-  partnershipEndDate DateTime?
-
-  partnershipTier String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([retailerUserId, brandUserId])
-  @@index([retailerUserId])
-  @@index([brandUserId])
-  @@map("retailer_brand_partnerships")
-}
-
-model ManufacturerBrandPartnership {
-  id String @id @default(uuid()) @db.Uuid
-
-  manufacturerUserId String @db.Uuid
-  manufacturerUser User @relation("ManufacturerBrandPartnerships_Manufacturer", fields: [manufacturerUserId], references: [id], onDelete: Cascade)
-
-  brandUserId String @db.Uuid
-  brandUser User @relation("ManufacturerBrandPartnerships_Brand", fields: [brandUserId], references: [id], onDelete: Cascade)
-
-  partnershipType String?
-  agreementDetails String?
-  isActive Boolean @default(true)
-  notes String?
-
-  partnershipStartDate DateTime?
-  partnershipEndDate DateTime?
-
-  partnershipTier String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([manufacturerUserId, brandUserId])
-  @@index([manufacturerUserId])
-  @@index([brandUserId])
-  @@map("manufacturer_brand_partnerships")
-}
-
-model ManufacturerRetailerPartnership {
-  id String @id @default(uuid()) @db.Uuid
-
-  manufacturerUserId String @db.Uuid
-  manufacturerUser User @relation("ManufacturerRetailerPartnerships_Manufacturer", fields: [manufacturerUserId], references: [id], onDelete: Cascade)
-
-  retailerUserId String @db.Uuid
-  retailerUser User @relation("ManufacturerRetailerPartnerships_Retailer", fields: [retailerUserId], references: [id], onDelete: Cascade)
-
-  partnershipType String?
-  agreementDetails String?
-  creditTerms String?
+  creditTerms   String?
   minimumOrderRequirements String?
-  isActive Boolean @default(true)
-  notes String?
-  
-  partnershipTier String?
+  isActive      Boolean          @default(true)
+  notes         String?
+  partnershipTier PartnershipTier?
+  startDate     DateTime?
+  endDate       DateTime?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  deletedAt     DateTime?        // Soft delete
 
-  partnershipStartDate DateTime?
-  partnershipEndDate DateTime?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([manufacturerUserId, retailerUserId])
-  @@index([manufacturerUserId])
-  @@index([retailerUserId])
-  @@map("manufacturer_retailer_partnerships")
+  @@unique([userOneId, userTwoId])
+  @@index([userOneId])
+  @@index([userTwoId])
+  @@index([type])
+  @@map("partnerships")
 }
 
+// Certifications for manufacturers
 model Certification {
-  id String @id @default(uuid()) @db.Uuid
-
-  manufacturerProfileId String @db.Uuid
-  manufacturerProfile ManufacturerProfile @relation(fields: [manufacturerProfileId], references: [id], onDelete: Cascade)
-
-  name String
-  description String?
+  id            String           @id @default(uuid()) @db.Uuid
+  manufacturerDetailsId String    @db.Uuid
+  manufacturerDetails ManufacturerDetails @relation(fields: [manufacturerDetailsId], references: [id], onDelete: Cascade)
+  name          String
+  description   String?
   issuingOrganization String?
   certificateNumber String?
-  issueDate DateTime?
-  expiryDate DateTime?
-
+  issueDate     DateTime?
+  expiryDate    DateTime?
   certificationCompliance String[]
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  deletedAt     DateTime?        // Soft delete
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([manufacturerProfileId])
+  @@index([manufacturerDetailsId])
   @@index([expiryDate])
   @@map("certifications")
 }
 
+// Company information for users
 model CompanyInformation {
-  id String @id @default(uuid()) @db.Uuid
-
-  userId String @unique @db.Uuid
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  name String
-  companyEmail String?
-  phoneNumber String?
+  id            String           @id @default(uuid()) @db.Uuid
+  userId        String           @unique @db.Uuid
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name          String
+  companyEmail  String?
+  phoneNumber   String?
   companyWebsite String?
-  establishedYear Int?
-  industry String?
-  companySize String?
+  establishedYear Int?           @default(0)
+  industry      String?
+  companySize   String?
   speciallization String?
   companySubtitle String?
-
   addressStreet String?
-  addressCity String?
-  addressState String?
+  addressCity   String?
+  addressState  String?
   addressZipCode String?
   addressCountry String?
-
   companyDescription String?
-
-  tags CompanyTag[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  tags          CompanyTag[]
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  deletedAt     DateTime?        // Soft delete
 
   @@index([userId])
   @@map("company_information")
 }
 
+// Tags for company information
 model CompanyTag {
-  id String @id @default(uuid()) @db.Uuid
-  name String
-
-  companyInfo CompanyInformation @relation(fields: [companyInfoId], references: [id], onDelete: Cascade)
-  companyInfoId String @db.Uuid
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String           @id @default(uuid()) @db.Uuid
+  name          String
+  companyInfoId String           @db.Uuid
+  companyInfo   CompanyInformation @relation(fields: [companyInfoId], references: [id], onDelete: Cascade)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  deletedAt     DateTime?        // Soft delete
 
   @@unique([companyInfoId, name])
   @@index([companyInfoId])
   @@map("company_tags")
 }
 
+// Manufacturing capabilities
 model ManufacturingCapability {
-  id String @id @default(uuid()) @db.Uuid
-
-  manufacturerProfileId String @unique @db.Uuid
-  manufacturerProfile ManufacturerProfile @relation(fields: [manufacturerProfileId], references: [id], onDelete: Cascade)
-
-  productionCapacity Int?
-  minimumOrderValue Float?
-
+  id            String           @id @default(uuid()) @db.Uuid
+  manufacturerDetailsId String    @unique @db.Uuid
+  manufacturerDetails ManufacturerDetails @relation(fields: [manufacturerDetailsId], references: [id], onDelete: Cascade)
+  productionCapacity Int?        @default(0)
+  minimumOrderValue Float?       @default(0)
   materialsHandled MaterialHandled[]
+  specialties   Specialty[]
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  deletedAt     DateTime?        // Soft delete
 
-  specialties Specialty[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([manufacturerProfileId])
+  @@index([manufacturerDetailsId])
   @@map("manufacturing_capabilities")
 }
 
+// Materials handled by manufacturers
 model MaterialHandled {
-  id String @id @default(uuid()) @db.Uuid
-  name String
- 
-  manufacturingCapability ManufacturingCapability @relation(fields: [manufacturingCapabilityId], references: [id], onDelete: Cascade)
+  id            String           @id @default(uuid()) @db.Uuid
+  name          String
   manufacturingCapabilityId String @db.Uuid
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  manufacturingCapability ManufacturingCapability @relation(fields: [manufacturingCapabilityId], references: [id], onDelete: Cascade)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  deletedAt     DateTime?        // Soft delete
 
   @@unique([manufacturingCapabilityId, name])
   @@index([manufacturingCapabilityId])
   @@map("materials_handled")
 }
 
+// Specialties of manufacturers
 model Specialty {
-  id String @id @default(uuid()) @db.Uuid
-  name String
-
-  manufacturingCapability ManufacturingCapability @relation(fields: [manufacturingCapabilityId], references: [id], onDelete: Cascade)
+  id            String           @id @default(uuid()) @db.Uuid
+  name          String
   manufacturingCapabilityId String @db.Uuid
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  manufacturingCapability ManufacturingCapability @relation(fields: [manufacturingCapabilityId], references: [id], onDelete: Cascade)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  deletedAt     DateTime?        // Soft delete
 
   @@unique([manufacturingCapabilityId, name])
   @@index([manufacturingCapabilityId])
   @@map("specialties")
 }
 
+// Notification preferences
 model NotificationPreferences {
-  id String @id @default(uuid()) @db.Uuid
-
-  userId String @unique @db.Uuid
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  emailNotifications Boolean @default(true)
-  messageNotifications Boolean @default(true)
-  matchNotifications Boolean @default(true)
-  marketingEmails Boolean @default(true)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String           @id @default(uuid()) @db.Uuid
+  userId        String           @unique @db.Uuid
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  emailNotifications Boolean     @default(true)
+  messageNotifications Boolean    @default(true)
+  connectionNotifications Boolean @default(true)
+  marketingEmails Boolean        @default(true)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  deletedAt     DateTime?        // Soft delete
 
   @@index([userId])
   @@map("notification_preferences")
 }
 
+// Security settings
 model SecuritySettings {
-  id String @id @default(uuid()) @db.Uuid
-
-  userId String @unique @db.Uuid
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  /*
-    SECURITY SETTINGS
-  */
+  id            String           @id @default(uuid()) @db.Uuid
+  userId        String           @unique @db.Uuid
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   twoFactorAuthentication Boolean @default(false)
   twoFactorSecret String?
-  twoFactorConfirmed Boolean @default(false)
-
-  backupCodes String[]
-
-  alertNewLogin Boolean @default(true)
-  alertNewDeviceLogin Boolean @default(true)
-  alertPasswordChanges Boolean @default(true)
+  twoFactorConfirmed Boolean     @default(false)
+  backupCodes   BackupCode[]
+  alertNewLogin Boolean          @default(true)
+  alertNewDeviceLogin Boolean    @default(true)
+  alertPasswordChanges Boolean   @default(true)
   alertSuspiciousActivity Boolean @default(true)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  deletedAt     DateTime?        // Soft delete
 
   @@index([userId])
   @@map("security_settings")
 }
 
+// Backup codes for 2FA
+model BackupCode {
+  id            String           @id @default(uuid()) @db.Uuid
+  securitySettingsId String      @db.Uuid
+  securitySettings SecuritySettings @relation(fields: [securitySettingsId], references: [id], onDelete: Cascade)
+  code          String
+  isUsed        Boolean          @default(false)
+  usedAt        DateTime?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  deletedAt     DateTime?        // Soft delete
+
+  @@index([securitySettingsId])
+  @@map("backup_codes")
+}
+
+// Application preferences
 model ApplicationPreferences {
-  id String @id @default(uuid()) @db.Uuid
-
-  userId String @unique @db.Uuid
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  language String @default("English")
-  theme String @default("light")
-  compactSidebarEnabled Boolean @default(false)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String           @id @default(uuid()) @db.Uuid
+  userId        String           @unique @db.Uuid
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  language      String           @default("English")
+  theme         String           @default("light")
+  compactSidebarEnabled Boolean  @default(false)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  deletedAt     DateTime?        // Soft delete
 
   @@index([userId])
   @@map("application_preferences")
 }
 
+// Production lines for manufacturers
 model ProductionLine {
-  id String @id @default(uuid()) @db.Uuid
-
-  manufacturerProfileId String @db.Uuid
-  manufacturerProfile ManufacturerProfile @relation(fields: [manufacturerProfileId], references: [id], onDelete: Restrict)
-
-  name String
-  lineType String?
-  capacityValue Float?
-  capacityUnit String?
+  id            String           @id @default(uuid()) @db.Uuid
+  manufacturerDetailsId String    @db.Uuid
+  manufacturerDetails ManufacturerDetails @relation(fields: [manufacturerDetailsId], references: [id], onDelete: Restrict)
+  name          String
+  lineType      String?
+  capacityValue Float?           @default(0)
+  capacityUnit  String?
   initialStatus String?
   operatorAssigned String
-  targetEfficiency Int?
+  targetEfficiency Int?          @default(0)
   nextMaintenanceDate DateTime?
   operationalSince DateTime?
-  energyConsumptionKwh Float?
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  energyConsumptionKwh Float?    @default(0)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  deletedAt     DateTime?        // Soft delete
 
-  @@index([manufacturerProfileId])
+  @@index([manufacturerDetailsId])
   @@map("production_lines")
 }
 
-model InventoryItems {
-  id String @id @default(uuid()) @db.Uuid
-
-  manufacturerProfileId String @db.Uuid
-  manufacturerProfile ManufacturerProfile @relation(fields: [manufacturerProfileId], references: [id], onDelete: Restrict)
-
-  itemName String
-  itemCategory String
-  itemSKU String
-  currentStock Int @default(0)
-  maximumStock Int?
+// Inventory items for manufacturers
+model InventoryItem {
+  id            String           @id @default(uuid()) @db.Uuid
+  manufacturerDetailsId String    @db.Uuid
+  manufacturerDetails ManufacturerDetails @relation(fields: [manufacturerDetailsId], references: [id], onDelete: Restrict)
+  itemName      String
+  itemCategory  String
+  itemSKU       String
+  currentStock  Int              @default(0)
+  maximumStock  Int?             @default(0)
   storageLocation String?
-  description String?
+  description   String?
+  catalogProductId String?        @db.Uuid // Link to catalog product
+  catalogProduct CatalogProduct? @relation(fields: [catalogProductId], references: [id])
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  deletedAt     DateTime?        // Soft delete
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([manufacturerProfileId, itemSKU])
-  @@index([manufacturerProfileId])
+  @@unique([manufacturerDetailsId, itemSKU])
+  @@index([manufacturerDetailsId])
+  @@index([catalogProductId])
   @@map("inventory_items")
 }
 
+// Catalog products for manufacturers
 model CatalogProduct {
-  id String @id @default(uuid()) @db.Uuid
-
-  manufacturerProfileId String @db.Uuid
-  manufacturerProfile ManufacturerProfile @relation(fields: [manufacturerProfileId], references: [id], onDelete: Cascade)
-
-  name String
-  
-  productCategoryId String @db.Uuid
+  id            String           @id @default(uuid()) @db.Uuid
+  manufacturerDetailsId String    @db.Uuid
+  manufacturerDetails ManufacturerDetails @relation(fields: [manufacturerDetailsId], references: [id], onDelete: Cascade)
+  name          String
+  productCategoryId String       @db.Uuid
   productCategory ProductCategory @relation(fields: [productCategoryId], references: [id])
-
-  minimumOrderQuantity Int
-  dailyCapacity Int
-  unitType UnitType @default(units)
-  currentAvailableStock Int
-  pricePerUnit Float 
-  productType ProductType @default(finishedGood)
-  leadTime String?
-  leadTimeUnit LeadTimeUnit @default(days)
-  description String?
-  imageUrl String?
-  isSustainableProduct Boolean @default(false)
-  productSKU String
-
-  isBestSeller Boolean @default(false)
-  isPopular Boolean @default(false)
-
+  minimumOrderQuantity Int       @default(0)
+  dailyCapacity Int              @default(0)
+  unitType      UnitType         @default(units)
+  stockLevel    Int              @default(0) // Replaced currentAvailableStock
+  pricePerUnit  Float            @default(0)
+  productType   ProductType      @default(finishedGood)
+  leadTime      String?
+  leadTimeUnit  LeadTimeUnit     @default(days)
+  description   String?
+  imageUrl      String?
+  isSustainableProduct Boolean   @default(false)
+  productSKU    String
+  isBestSeller  Boolean          @default(false)
+  isPopular     Boolean          @default(false)
   productReviews Review[]
+  orders        Order[]
+  inventoryItems InventoryItem[]
+  retailerProducts RetailerProduct[]
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  deletedAt     DateTime?        // Soft delete
 
-  orders Order[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([manufacturerProfileId, productSKU])
-  @@index([manufacturerProfileId])
+  @@unique([manufacturerDetailsId, productSKU])
+  @@index([manufacturerDetailsId])
   @@index([productCategoryId])
   @@index([name])
   @@map("catalog_products")
 }
 
+// Product categories for catalog products
 model ProductCategory {
-  id String @id @default(uuid()) @db.Uuid
-
-  name String @unique
-
-  products CatalogProduct[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String           @id @default(uuid()) @db.Uuid
+  name          String           @unique
+  products      CatalogProduct[]
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  deletedAt     DateTime?        // Soft delete
 
   @@map("product_categories")
 }
 
+// Product features for brands
+model ProductFeature {
+  id            String           @id @default(uuid()) @db.Uuid
+  brandDetailsId String          @db.Uuid
+  brandDetails  BrandDetails     @relation(fields: [brandDetailsId], references: [id], onDelete: Cascade)
+  name          String
+  description   String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  deletedAt     DateTime?        // Soft delete
+
+  @@unique([brandDetailsId, name])
+  @@index([brandDetailsId])
+  @@map("product_features")
+}
+
+// Certifications for brands
+model BrandCertification {
+  id            String           @id @default(uuid()) @db.Uuid
+  brandDetailsId String          @db.Uuid
+  brandDetails  BrandDetails     @relation(fields: [brandDetailsId], references: [id], onDelete: Cascade)
+  name          String
+  description   String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  deletedAt     DateTime?        // Soft delete
+
+  @@unique([brandDetailsId, name])
+  @@index([brandDetailsId])
+  @@map("brand_certifications")
+}
+
+// Sustainability claims for brands
+model SustainabilityClaim {
+  id            String           @id @default(uuid()) @db.Uuid
+  brandDetailsId String          @db.Uuid
+  brandDetails  BrandDetails     @relation(fields: [brandDetailsId], references: [id], onDelete: Cascade)
+  name          String
+  description   String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  deletedAt     DateTime?        // Soft delete
+
+  @@unique([brandDetailsId, name])
+  @@index([brandDetailsId])
+  @@map("sustainability_claims")
+}
+
+// Top selling categories for retailers
+model TopSellingCategory {
+  id            String           @id @default(uuid()) @db.Uuid
+  retailerDetailsId String        @db.Uuid
+  retailerDetails RetailerDetails @relation(fields: [retailerDetailsId], references: [id], onDelete: Cascade)
+  name          String
+  salesVolume   Float?           @default(0)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  deletedAt     DateTime?        // Soft delete
+
+  @@index([retailerDetailsId])
+  @@map("top_selling_categories")
+}
+
+// Customer demographics for retailers
+model CustomerDemographic {
+  id            String           @id @default(uuid()) @db.Uuid
+  retailerDetailsId String        @db.Uuid
+  retailerDetails RetailerDetails @relation(fields: [retailerDetailsId], references: [id], onDelete: Cascade)
+  name          String           // e.g., "Age 18-24"
+  percentage    Float?           @default(0)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  deletedAt     DateTime?        // Soft delete
+
+  @@index([retailerDetailsId])
+  @@map("customer_demographics")
+}
+
+// Purchase frequencies for retailers
+model PurchaseFrequency {
+  id            String           @id @default(uuid()) @db.Uuid
+  retailerDetailsId String        @db.Uuid
+  retailerDetails RetailerDetails @relation(fields: [retailerDetailsId], references: [id], onDelete: Cascade)
+  name          String           // e.g., "Weekly"
+  percentage    Float?           @default(0)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  deletedAt     DateTime?        // Soft delete
+
+  @@index([retailerDetailsId])
+  @@map("purchase_frequencies")
+}
+
+// Reviews for catalog products
 model Review {
-  id String @id @default(uuid()) @db.Uuid
-
-  userId String @db.Uuid
-  author User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  catalogProductId String @db.Uuid
-  product CatalogProduct @relation(fields: [catalogProductId], references: [id], onDelete: Cascade)
-
-  rating Int?
-  comment String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String           @id @default(uuid()) @db.Uuid
+  userId        String           @db.Uuid
+  author        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  catalogProductId String        @db.Uuid
+  product       CatalogProduct   @relation(fields: [catalogProductId], references: [id], onDelete: Cascade)
+  rating        Int?             @default(0)
+  comment       String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  deletedAt     DateTime?        // Soft delete
 
   @@unique([userId, catalogProductId])
   @@index([userId])
@@ -638,192 +641,232 @@ model Review {
   @@map("reviews")
 }
 
+// Orders placed by users
 model Order {
-  id String @id @default(uuid()) @db.Uuid
-
-  userId String @db.Uuid
-  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
-
-  productId String @db.Uuid
-  product CatalogProduct @relation(fields: [productId], references: [id], onDelete: Restrict)
-
-  quantity Int
-  totalPrice Float
-  status OrderStatus @default(pending)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String           @id @default(uuid()) @db.Uuid
+  userId        String           @db.Uuid
+  user          User             @relation(fields: [userId], references: [id], onDelete: Restrict)
+  productId     String           @db.Uuid
+  product       CatalogProduct   @relation(fields: [productId], references: [id], onDelete: Restrict)
+  quantity      Int              @default(0)
+  totalPrice    Float            @default(0)
+  status        Status           @default(pending)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  deletedAt     DateTime?        // Soft delete
 
   @@index([userId])
   @@index([productId])
   @@map("orders")
 }
 
-model Social {
-  id String @id @default(uuid()) @db.Uuid
-
-  userId String @db.Uuid
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  platform String
-  url String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+// Social media links for users
+model SocialLink {
+  id            String           @id @default(uuid()) @db.Uuid
+  userId        String           @db.Uuid
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  platform      String
+  url           String
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  deletedAt     DateTime?        // Soft delete
 
   @@unique([userId, platform])
   @@index([userId])
   @@map("social_links")
 }
 
+// Suppliers added by users
 model Supplier {
-  id String @id @default(uuid()) @db.Uuid
-  name String
-
-  userId String @db.Uuid
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  supplierCategoryId String @db.Uuid
+  id            String           @id @default(uuid()) @db.Uuid
+  name          String
+  userId        String           @db.Uuid
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  supplierCategoryId String       @db.Uuid
   supplierCategory SupplierCategory @relation(fields: [supplierCategoryId], references: [id])
-  
   contactPerson String
-  contactEmail String
-  contactPhone String
-  city String
-  country String
-  fullAddress String?
-  description String?
-  status SupplierStatus @default(pending)
-  reliabilityRating Float?
-  leadTime String?
-
-  materials SupplierMaterial[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  contactEmail  String
+  contactPhone  String
+  city          String
+  country       String
+  fullAddress   String?
+  description   String?
+  status        Status           @default(pending)
+  reliabilityRating Float?        @default(0)
+  leadTime      String?
+  materials     SupplierMaterial[]
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  deletedAt     DateTime?        // Soft delete
 
   @@index([userId])
   @@index([supplierCategoryId])
   @@map("suppliers")
 }
 
+// Materials provided by suppliers
 model SupplierMaterial {
-  id String @id @default(uuid()) @db.Uuid
-  
-  name String
-  supplierId String @db.Uuid
-  supplier Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String           @id @default(uuid()) @db.Uuid
+  name          String
+  supplierId    String           @db.Uuid
+  supplier      Supplier         @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  deletedAt     DateTime?        // Soft delete
 
   @@unique([supplierId, name])
   @@index([supplierId])
   @@map("supplier_materials")
 }
 
+// Supplier categories
 model SupplierCategory {
-  id String @id @default(uuid()) @db.Uuid
-
-  name String @unique
-
-  supplier Supplier[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String           @id @default(uuid()) @db.Uuid
+  name          String           @unique
+  supplier      Supplier[]
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  deletedAt     DateTime?        // Soft delete
 
   @@map("supplier_categories")
 }
 
-model Match {
-  id String @id @default(uuid()) @db.Uuid
-
-  userOneId String @db.Uuid
-  userOne User @relation("UserOneMatches", fields: [userOneId], references: [id], onDelete: Cascade)
-
-  userTwoId String @db.Uuid
-  userTwo User @relation("UserTwoMatches", fields: [userTwoId], references: [id], onDelete: Cascade)
-
-  establishedAt DateTime? // when the match was accepted
-  terminatedAt DateTime?
-
-  userStatus UserMatchStatus[] @relation("MatchUserStatus")
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+// User connections (replaces Match)
+model Connection {
+  id            String           @id @default(uuid()) @db.Uuid
+  userOneId     String           @db.Uuid
+  userOne       User             @relation("UserOneConnections", fields: [userOneId], references: [id], onDelete: Cascade)
+  userTwoId     String           @db.Uuid
+  userTwo       User             @relation("UserTwoConnections", fields: [userTwoId], references: [id], onDelete: Cascade)
+  status        ConnectionStatus @default(pending)
+  isStarredByUserOne Boolean      @default(false)
+  isStarredByUserTwo Boolean      @default(false)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  deletedAt     DateTime?        // Soft delete
 
   @@unique([userOneId, userTwoId])
   @@index([userOneId])
   @@index([userTwoId])
-  @@map("matches")
+  @@index([status])
+  @@map("connections")
 }
 
-model UserMatchStatus {
-  id String @id @default(uuid()) @db.Uuid
+// Conversations between users
+model Conversation {
+  id            String           @id @default(uuid()) @db.Uuid
+  userOneId     String           @db.Uuid
+  userOne       User             @relation("UserOneConversations", fields: [userOneId], references: [id], onDelete: Cascade)
+  userTwoId     String           @db.Uuid
+  userTwo       User             @relation("UserTwoConversations", fields: [userTwoId], references: [id], onDelete: Cascade)
+  messages      Message[]
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  deletedAt     DateTime?        // Soft delete
 
-  userId String @db.Uuid
-  user User @relation("UserMatchStatuses", fields: [userId], references: [id], onDelete: Cascade)
-  
-  matchId String @db.Uuid
-  match Match @relation("MatchUserStatus", fields: [matchId], references: [id], onDelete: Cascade)
+  @@unique([userOneId, userTwoId])
+  @@index([userOneId])
+  @@index([userTwoId])
+  @@map("conversations")
+}
 
-  isStarred Boolean @default(false)
-  status MatchingStatus @default(pending)
+// Messages within conversations
+model Message {
+  id            String           @id @default(uuid()) @db.Uuid
+  conversationId String          @db.Uuid
+  conversation  Conversation     @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId      String           @db.Uuid
+  sender        User             @relation("SenderMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  content       String
+  isRead        Boolean          @default(false)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  deletedAt     DateTime?        // Soft delete
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  @@index([conversationId])
+  @@index([senderId])
+  @@map("messages")
+}
 
-  @@unique([userId, matchId])
+// Notifications for users
+model Notification {
+  id            String           @id @default(uuid()) @db.Uuid
+  userId        String           @db.Uuid
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type          NotificationType
+  message       String
+  isRead        Boolean          @default(false)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  deletedAt     DateTime?        // Soft delete
+
   @@index([userId])
-  @@index([matchId])
-  @@index([userId, status])
-  @@map("user_match_status")
+  @@index([type])
+  @@map("notifications")
 }
 
+// Password reset tokens
 model PasswordResetToken {
-  id String @id @default(uuid()) @db.Uuid
-  token String @unique
-
-  userId String @db.Uuid
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  expiresAt DateTime
-  isUsed Boolean @default(false)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String           @id @default(uuid()) @db.Uuid
+  token         String           @unique
+  userId        String           @db.Uuid
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt     DateTime
+  isUsed        Boolean          @default(false)
+  usedAt        DateTime?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  deletedAt     DateTime?        // Soft delete
 
   @@index([userId])
   @@index([token])
   @@map("password_reset_tokens")
 }
 
+// Admin users
 model Admin {
-  id String @id @default(uuid()) @db.Uuid
+  id            String           @id @default(uuid()) @db.Uuid
+  username      String           @unique
+  password      String
+  email         String?          // Added for contact
+  lastLogin     DateTime?        // Added for tracking
+  permissions   String[]         // Added for role-based access
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  deletedAt     DateTime?        // Soft delete
 
-  username String @unique
-  password String
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
+  @@index([username])
   @@map("admins")
 }
 
+// Enums
 enum UserRole {
   manufacturer
   retailer
   brand
+  admin // Added for potential admin integration
 }
 
-enum Status {
+enum PresenceStatus {
   online
   offline
   away
   busy
+}
+
+enum AccountStatus {
   active
   inactive
-  pending
   suspended
+  pending
+}
+
+enum Status {
+  pending
+  active
+  completed
+  cancelled
+  archived
 }
 
 enum UnitType {
@@ -860,32 +903,11 @@ enum LeadTimeUnit {
   years
 }
 
-enum OrderStatus {
-  pending
-  processing
-  shipped
-  delivered
-  cancelled
-}
-
-enum SupplierStatus {
-  pending
-  active
-}
-
-enum MatchingStatus {
+enum ConnectionStatus {
   pending
   accepted
   declined
   reconsidered
-}
-
-enum CampaignStatus {
-  upcoming
-  ongoing
-  completed
-  paused
-  archived
 }
 
 enum CampaignType {
@@ -897,4 +919,25 @@ enum CampaignType {
   emailMarketing
   inStore
   outdoor
+}
+
+enum PartnershipType {
+  retailer_brand
+  manufacturer_brand
+  manufacturer_retailer
+}
+
+enum PartnershipTier {
+  standard
+  premium
+  strategic
+}
+
+enum NotificationType {
+  connection_request
+  connection_accepted
+  connection_declined
+  order_update
+  message
+  partnership_update
 }

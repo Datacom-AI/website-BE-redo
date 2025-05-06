@@ -15,34 +15,38 @@ import { AuthResetPasswordDTO } from 'src/common/DTO/auth/auth.resetPassword.dto
 import { UserReadPrivateDTO } from 'src/common/DTO/user/user.private.Read.dto';
 
 @Controller('auth')
-@UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
+@UsePipes(
+  new ValidationPipe({
+    whitelist: true,
+    forbidNonWhitelisted: true,
+    transform: true,
+  }),
+)
 export class AuthController {
   constructor(private authService: AuthService) {}
 
-  // user register
   @Post('/register')
-  async register(
-    @Body()
-    registerUserDTO: AuthRegisterDTO,
-  ) {
+  async register(@Body() registerUserDTO: AuthRegisterDTO): Promise<{
+    accessToken: string;
+    refreshToken: string;
+    user: UserReadPrivateDTO;
+  }> {
     return await this.authService.registerService(registerUserDTO);
   }
 
-  // user login
   @Post('/login')
-  async login(
-    @Body()
-    authLoginUserDTO: AuthLoginDTO,
-  ) {
+  async login(@Body() authLoginUserDTO: AuthLoginDTO): Promise<{
+    accessToken: string;
+    refreshToken: string;
+    user: UserReadPrivateDTO;
+  }> {
     return await this.authService.loginService(authLoginUserDTO);
   }
 
-  // user forgot password
   @Post('/forgot-password')
-  @HttpCode(HttpStatus.OK) // response code 200 even if email not found for security reasons
+  @HttpCode(HttpStatus.OK)
   async forgotPassword(
-    @Body()
-    forgotPasswordDTO: AuthForgotPasswordDTO,
+    @Body() forgotPasswordDTO: AuthForgotPasswordDTO,
   ): Promise<{ message: string }> {
     await this.authService.forgotPasswordService(forgotPasswordDTO);
 
@@ -52,15 +56,12 @@ export class AuthController {
     };
   }
 
-  // user reset password
   @Post('/reset-password')
-  @HttpCode(HttpStatus.OK) // response code 200 even if token not found for security reasons
+  @HttpCode(HttpStatus.OK)
   async resetPassword(
-    @Body()
-    resetPasswordDTO: AuthResetPasswordDTO,
+    @Body() resetPasswordDTO: AuthResetPasswordDTO,
   ): Promise<{ message: string }> {
-    const updatedUser =
-      await this.authService.resetPasswordService(resetPasswordDTO);
+    await this.authService.resetPasswordService(resetPasswordDTO);
 
     return {
       message: 'Password reset successfully.',
