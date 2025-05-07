@@ -1,13 +1,8 @@
 import { UserRole } from 'generated/prisma';
-import { CompanyInformationMinimalReadDTO } from './companyInformationMinimal.Read.dto';
 
 export class UserReadMinimalDTO {
   id: string;
-
+  email: string;
   name: string;
-
   role: UserRole;
-  profileImageUrl?: string | null;
-
-  companyInfo?: CompanyInformationMinimalReadDTO | null;
 }

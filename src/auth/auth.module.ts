@@ -1,42 +1,52 @@
-import { forwardRef, Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
-import { UsersModule } from 'src/users/users.module';
-import { PrismaService } from 'src/prisma.service';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
-import { EmailModule } from 'src/email/email.module';
-import { ConfigService } from '@nestjs/config';
-import { JwtAccessTokenStrategy } from './accessToken.strategy';
-import { JwtRefreshTokenStrategy } from './refreshToken.strategy';
-import { MappersModule } from 'src/common/mappers/mappers.module';
+import { JwtStrategy } from './jwt.strategy';
+import { PrismaService } from 'src/prisma.service';
+import { MailerModule } from '@nestjs-modules/mailer';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handlebars.adapter';
 
 @Module({
   imports: [
+    PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
+      imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
         secret: configService.get<string>('JWT_SECRET'),
+        signOptions: { expiresIn: '15m' },
       }),
       inject: [ConfigService],
     }),
-    JwtModule.registerAsync({
+    MailerModule.forRootAsync({
+      imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
-        secret: configService.get<string>('JWT_REFRESH_SECRET'),
+        transport: {
+          host: configService.get<string>('SMTP_HOST'),
+          port: configService.get<number>('SMTP_PORT'),
+          secure: true,
+          auth: {
+            user: configService.get<string>('SMTP_USER'),
+            pass: configService.get<string>('SMTP_PASS'),
+          },
+        },
+        defaults: {
+          from: `"No Reply" <${configService.get<string>('SMTP_USER')}>`,
+        },
+        template: {
+          dir: process.cwd() + '/templates/',
+          adapter: new HandlebarsAdapter(),
+          options: { strict: true },
+        },
       }),
       inject: [ConfigService],
     }),
-    EmailModule,
-    PassportModule,
-    forwardRef(() => UsersModule),
-    MappersModule,
+    ConfigModule,
   ],
   controllers: [AuthController],
-  providers: [
-    AuthService,
-    PrismaService,
-    JwtAccessTokenStrategy,
-    JwtRefreshTokenStrategy,
-  ],
+  providers: [AuthService, JwtStrategy, PrismaService],
   exports: [AuthService],
 })
 export class AuthModule {}

@@ -6,13 +6,20 @@ import {
   HttpStatus,
   UsePipes,
   ValidationPipe,
+  UseGuards,
+  Request,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AuthRegisterDTO } from 'src/common/DTO/auth/auth.register.dto';
 import { AuthLoginDTO } from 'src/common/DTO/auth/auth.login.dto';
 import { AuthForgotPasswordDTO } from 'src/common/DTO/auth/auth.forgotPassword.dto';
 import { AuthResetPasswordDTO } from 'src/common/DTO/auth/auth.resetPassword.dto';
-import { UserReadPrivateDTO } from 'src/common/DTO/user/user.private.Read.dto';
+import { UserReadPrivateDTO } from 'src/common/dto/user/user.private.Read.dto';
+import { User } from 'generated/prisma';
+import { JwtAuthGuard } from 'src/common/guards/jwtAuth.guard';
+import { AuthVerifyEmailDTO } from 'src/common/DTO/auth/auth.verifyEmail.dto';
+import { AuthChooseRoleDTO } from 'src/common/DTO/auth/auth.chooseRole.dto';
+import { UserReadMinimalDTO } from 'src/common/DTO/others/userMinimal.Read.dto';
 
 @Controller('auth')
 @UsePipes(
@@ -25,30 +32,47 @@ import { UserReadPrivateDTO } from 'src/common/DTO/user/user.private.Read.dto';
 export class AuthController {
   constructor(private authService: AuthService) {}
 
-  @Post('/register')
-  async register(@Body() registerUserDTO: AuthRegisterDTO): Promise<{
-    accessToken: string;
-    refreshToken: string;
-    user: UserReadPrivateDTO;
-  }> {
-    return await this.authService.registerService(registerUserDTO);
+  @Post('register')
+  async register(@Body() dto: AuthRegisterDTO): Promise<User> {
+    return await this.authService.registerService(dto);
+  }
+
+  @Post('verify-email')
+  @HttpCode(HttpStatus.OK)
+  async verifyEmail(@Body() dto: AuthVerifyEmailDTO): Promise<User> {
+    return await this.authService.verifyEmailService(dto);
+  }
+
+  @Post('choose-role')
+  @HttpCode(HttpStatus.OK)
+  async chooseRole(@Body() dto: AuthChooseRoleDTO): Promise<User> {
+    return await this.authService.chooseRoleService(dto);
   }
 
   @Post('/login')
-  async login(@Body() authLoginUserDTO: AuthLoginDTO): Promise<{
+  @HttpCode(HttpStatus.OK)
+  async login(@Body() dto: AuthLoginDTO): Promise<{
     accessToken: string;
     refreshToken: string;
-    user: UserReadPrivateDTO;
+    user: UserReadMinimalDTO;
   }> {
-    return await this.authService.loginService(authLoginUserDTO);
+    return await this.authService.loginService(dto);
   }
 
-  @Post('/forgot-password')
+  @Post('refresh-token')
+  @HttpCode(HttpStatus.OK)
+  refreshToken(
+    @Body('refreshToken') refreshToken: string,
+  ): Promise<{ newAccessToken: string }> {
+    return this.authService.refreshTokenService(refreshToken);
+  }
+
+  @Post('forgot-password')
   @HttpCode(HttpStatus.OK)
   async forgotPassword(
-    @Body() forgotPasswordDTO: AuthForgotPasswordDTO,
+    @Body() dto: AuthForgotPasswordDTO,
   ): Promise<{ message: string }> {
-    await this.authService.forgotPasswordService(forgotPasswordDTO);
+    await this.authService.forgotPasswordService(dto);
 
     return {
       message:
@@ -59,12 +83,18 @@ export class AuthController {
   @Post('/reset-password')
   @HttpCode(HttpStatus.OK)
   async resetPassword(
-    @Body() resetPasswordDTO: AuthResetPasswordDTO,
+    @Body() dto: AuthResetPasswordDTO,
   ): Promise<{ message: string }> {
-    await this.authService.resetPasswordService(resetPasswordDTO);
+    await this.authService.resetPasswordService(dto);
 
     return {
       message: 'Password reset successfully.',
     };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('profile')
+  getProfile(@Request() req) {
+    return req.user;
   }
 }
