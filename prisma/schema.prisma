@@ -8,7 +8,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// User model representing all users (manufacturer, brand, retailer)
 model User {
   id            String           @id @default(uuid()) @db.Uuid
   email         String           @unique
@@ -19,8 +18,8 @@ model User {
   accountStatus AccountStatus    @default(pending)
   lastLogin     DateTime?
   jobTitle      String?
-  profileImageUrl String?
-  bannerImageUrl String?
+  profileImage String?
+  bannerImage String?
   professionalBio String?
   socialLinks   SocialLink[]
   passwordResetToken PasswordResetToken[]
@@ -50,7 +49,6 @@ model User {
   @@map("users")
 }
 
-// Profile model consolidating role-specific profiles
 model Profile {
   id            String           @id @default(uuid()) @db.Uuid
   userId        String           @unique @db.Uuid
@@ -83,7 +81,7 @@ model ManufacturerDetails {
   showCertifications Boolean @default(false)
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
-  deletedAt     DateTime?        // Soft delete
+  deletedAt     DateTime?        
 
   @@index([profileId])
   @@map("manufacturer_details")
@@ -107,7 +105,7 @@ model BrandDetails {
   marketingCampaigns MarketingCampaign[]
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
-  deletedAt     DateTime?        // Soft delete
+  deletedAt     DateTime?        
 
   @@index([profileId])
   @@map("brand_details")
@@ -497,7 +495,7 @@ model CatalogProduct {
   leadTime      String?
   leadTimeUnit  LeadTimeUnit     @default(days)
   description   String?
-  imageUrl      String?
+  image      String?
   isSustainableProduct Boolean   @default(false)
   productSKU    String
   isBestSeller  Boolean          @default(false)

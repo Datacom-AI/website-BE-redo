@@ -29,7 +29,7 @@ export class UsersController {
 
   @Get()
   async getAllUsers(): Promise<UserReadPublicDTO[]> {
-    return this.userService.findAllPublic();
+    return await this.userService.findAllPublic();
   }
 
   @Get('find/:id')
@@ -62,7 +62,7 @@ export class UsersController {
     @GetUserProfile() user: User,
     @Body() profileData: UserUpdateProfileDTO,
   ): Promise<UserReadPrivateDTO | undefined> {
-    return this.userService.updateProfile(user.id, profileData);
+    return await this.userService.updateProfile(user.id, profileData);
   }
 
   @Put('credentials')

@@ -173,10 +173,11 @@ export class UserMapperService {
     };
   }
 
-  toCompanyInformationReadDTO(
-    companyInfo: any,
-  ): CompanyInformationReadDTO | null {
-    if (!companyInfo) return null;
+  toCompanyInformationReadDTO(companyInfo: any): CompanyInformationReadDTO {
+    if (!companyInfo) {
+      throw new NotFoundException('Company information not found');
+    }
+
     return {
       id: companyInfo.id,
       userId: companyInfo.userId,

@@ -1,11 +1,11 @@
-import { Status, UserRole } from 'generated/prisma';
+import { Status, UserRole } from "generated/prisma";
 import {
   IsEmail,
   IsNotEmpty,
   IsString,
   IsOptional,
   IsEnum,
-} from 'class-validator';
+} from "class-validator";
 
 export class UserRawDTO {
   @IsNotEmpty()
