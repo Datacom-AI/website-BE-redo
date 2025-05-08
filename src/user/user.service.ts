@@ -1,8 +1,11 @@
+import * as fs from 'fs/promises';
+
 import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -29,12 +32,39 @@ export class UserService {
     private configService: ConfigService,
   ) {}
 
-  private getUploadPath(): string {
-    return this.configService.get<string>('UPLOAD_PATH') || './uploads';
+  private getUploadPath(subdir: 'profile-image' | 'banner-image'): string {
+    const basePath =
+      this.configService.get<string>('UPLOAD_PATH') || './uploads';
+    return path.join(basePath, subdir);
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
-  private mapUserToDTO(user: User & any): UserReadPrivateDTO {
+  private async ensureUploadPathExists(directory: string): Promise<void> {
+    try {
+      await fs.mkdir(directory, { recursive: true });
+    } catch (error) {
+      this.logger.error(`Failed to create directory ${directory}:`, error);
+      throw new BadRequestException(
+        `Failed to create directory ${directory}: ${error.message}`,
+      );
+    }
+  }
+
+  private readonly logger = new Logger(UserService.name);
+
+  private mapUserToDTO(
+    user: User & {
+      companyInfo?: any;
+      notificationPreferences?: any;
+      securitySettings?: any;
+      applicationPreferences?: any;
+      socialLinks?: any[];
+      profile?: {
+        manufacturerDetails?: any;
+        brandDetails?: any;
+        retailerDetails?: any;
+      } | null;
+    },
+  ): UserReadPrivateDTO {
     return {
       id: user.id,
       email: user.email,
@@ -52,9 +82,14 @@ export class UserService {
       securitySettings: user.securitySettings,
       applicationPreferences: user.applicationPreferences,
       socialLinks: user.socialLinks,
-      manufacturerProfile: user.profile?.manufacturerDetails,
-      brandProfile: user.profile?.brandDetails,
-      retailerProfile: user.profile?.retailerDetails,
+      manufacturerProfile:
+        user.role === 'manufacturer'
+          ? user.profile?.manufacturerDetails
+          : undefined,
+      brandProfile:
+        user.role === 'brand' ? user.profile?.brandDetails : undefined,
+      retailerProfile:
+        user.role === 'retailer' ? user.profile?.retailerDetails : undefined,
       isProfilePublic: user.isProfilePublic,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
@@ -64,6 +99,7 @@ export class UserService {
   // CRUD Methods
   async findAllService(): Promise<UserReadPrivateDTO[]> {
     const users = await this.prisma.user.findMany({
+      where: { deletedAt: null },
       include: {
         companyInfo: true,
         notificationPreferences: true,
@@ -79,7 +115,8 @@ export class UserService {
         },
       },
     });
-    return users.map((users) => this.mapUserToDTO(users));
+
+    return users.map((user) => this.mapUserToDTO(user));
   }
 
   async findOneService(id: string): Promise<UserReadPrivateDTO> {
@@ -88,7 +125,7 @@ export class UserService {
     }
     try {
       const user = await this.prisma.user.findUnique({
-        where: { id },
+        where: { id, deletedAt: null },
         include: {
           companyInfo: true,
           notificationPreferences: true,
@@ -122,7 +159,7 @@ export class UserService {
     }
     try {
       const user = await this.prisma.user.findUnique({
-        where: { email },
+        where: { email, deletedAt: null },
         include: {
           companyInfo: true,
           notificationPreferences: true,
@@ -167,6 +204,7 @@ export class UserService {
           role: userData.role,
           accountStatus: 'pending',
           presenceStatus: 'offline',
+          isProfilePublic: false,
         },
         include: {
           companyInfo: true,
@@ -193,20 +231,36 @@ export class UserService {
   }
 
   async deleteUserService(id: string): Promise<void> {
-    const user = await this.prisma.user.findUnique({ where: { id } });
+    const user = await this.prisma.user.findUnique({
+      where: { id, deletedAt: null },
+    });
     if (!user) {
       throw new NotFoundException('User not found');
     }
 
-    const uploadPath = this.getUploadPath();
+    const profileImagePath = this.getUploadPath('profile-image');
+    const bannerImagePath = this.getUploadPath('banner-image');
+
     if (user.profileImage) {
-      removeImage(path.join(uploadPath, user.profileImage));
-    }
-    if (user.bannerImage) {
-      removeImage(path.join(uploadPath, user.bannerImage));
+      try {
+        removeImage(path.join(profileImagePath, user.profileImage));
+      } catch (error) {
+        this.logger.error('Failed to remove profile image:', error);
+      }
     }
 
-    await this.prisma.user.delete({ where: { id } });
+    if (user.bannerImage) {
+      try {
+        removeImage(path.join(bannerImagePath, user.bannerImage));
+      } catch (error) {
+        this.logger.error('Failed to remove banner image:', error);
+      }
+    }
+
+    await this.prisma.user.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    });
   }
 
   // Profile Management
@@ -293,7 +347,7 @@ export class UserService {
 
     try {
       const user = await this.prisma.user.update({
-        where: { id: userId },
+        where: { id: userId, deletedAt: null },
         data: updateData,
         include: {
           companyInfo: true,
@@ -312,6 +366,8 @@ export class UserService {
       });
       return this.mapUserToDTO(user);
     } catch (error) {
+      this.logger.error('Profile update failed:', error);
+
       if (error.code === 'P2002') {
         throw new ConflictException(
           'Email or other unique field already exists',
@@ -325,7 +381,10 @@ export class UserService {
     userId: string,
     dto: UserUpdateCredentialDTO,
   ): Promise<UserReadPrivateDTO> {
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId, deletedAt: null },
+    });
+
     if (!user) {
       throw new NotFoundException('User not found');
     }
@@ -377,7 +436,9 @@ export class UserService {
     userId: string,
     dto: PreferencesNotificationUpdateDTO,
   ): Promise<UserReadPrivateDTO> {
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId, deletedAt: null },
+    });
     if (!user) {
       throw new NotFoundException('User not found');
     }
@@ -415,7 +476,9 @@ export class UserService {
     userId: string,
     dto: SecuritySettingsUpdateDTO,
   ): Promise<UserReadPrivateDTO> {
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId, deletedAt: null },
+    });
     if (!user) {
       throw new NotFoundException('User not found');
     }
@@ -453,7 +516,9 @@ export class UserService {
     userId: string,
     dto: PreferencesApplicationUpdateDTO,
   ): Promise<UserReadPrivateDTO> {
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId, deletedAt: null },
+    });
     if (!user) {
       throw new NotFoundException('User not found');
     }
@@ -491,29 +556,48 @@ export class UserService {
     userId: string,
     files: Express.Multer.File[],
   ): Promise<UserReadPrivateDTO> {
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId, deletedAt: null },
+    });
+
     if (!user) {
-      throw new BadRequestException('User not found');
+      throw new NotFoundException('User not found');
     }
 
-    const uploadPath = this.getUploadPath();
+    const profileImagePath = this.getUploadPath('profile-image');
+    const bannerImagePath = this.getUploadPath('banner-image');
+    await this.ensureUploadPathExists(profileImagePath);
+    await this.ensureUploadPathExists(bannerImagePath);
+
     const updateData: any = {};
 
     for (const file of files) {
-      const imageName = createImageName(file);
-      const imagePath = path.join(uploadPath, imageName);
-      saveImage(file, imagePath);
+      try {
+        const imageName = createImageName(file);
+        let imagePath: string;
 
-      if (file.fieldname === 'profileImage') {
-        if (user.profileImage) {
-          removeImage(path.join(uploadPath, user.profileImage));
+        if (file.fieldname === 'profileImage') {
+          imagePath = path.join(profileImagePath, imageName);
+          if (user.profileImage) {
+            removeImage(path.join(profileImagePath, user.profileImage));
+          }
+          updateData.profileImage = imageName;
+        } else if (file.fieldname === 'bannerImage') {
+          imagePath = path.join(bannerImagePath, imageName);
+          if (user.bannerImage) {
+            removeImage(path.join(bannerImagePath, user.bannerImage));
+          }
+          updateData.bannerImage = imageName;
+        } else {
+          throw new BadRequestException(
+            `Invalid field name: ${file.fieldname}`,
+          );
         }
-        updateData.profileImage = imageName;
-      } else if (file.fieldname === 'bannerImage') {
-        if (user.bannerImage) {
-          removeImage(path.join(uploadPath, user.bannerImage));
-        }
-        updateData.bannerImage = imageName;
+
+        saveImage(file, imagePath);
+      } catch (error) {
+        this.logger.error(`Failed to process image ${file.fieldname}:`, error);
+        throw new BadRequestException(`Failed to upload ${file.fieldname}`);
       }
     }
 

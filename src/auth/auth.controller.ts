@@ -20,7 +20,9 @@ import { JwtAuthGuard } from 'src/common/guards/jwtAuth.guard';
 import { AuthVerifyEmailDTO } from 'src/common/DTO/auth/auth.verifyEmail.dto';
 import { AuthChooseRoleDTO } from 'src/common/DTO/auth/auth.chooseRole.dto';
 import { UserReadMinimalDTO } from 'src/common/DTO/others/userMinimal.Read.dto';
+import { ApiTags } from '@nestjs/swagger';
 
+@ApiTags('Auth')
 @Controller('auth')
 @UsePipes(
   new ValidationPipe({
@@ -99,6 +101,35 @@ export class AuthController {
       message: 'Password reset successfully.',
     };
   }
+
+  /* ADMIN CONTROLLERS */
+
+  @Post('admin/register')
+  @HttpCode(HttpStatus.OK)
+  async adminRegister(
+    @Body()
+    body: {
+      username: string;
+      password: string;
+      email?: string;
+    },
+  ): Promise<{
+    id: string;
+    username: string;
+    email?: string;
+  }> {
+    return this.authService.adminRegisterService(body);
+  }
+
+  @Post('admin/login')
+  @HttpCode(HttpStatus.OK)
+  async adminLogin(
+    @Body() body: { username: string; password: string },
+  ): Promise<{ accessToken: string }> {
+    return this.authService.adminLoginService(body.username, body.password);
+  }
+
+  /* END OF ADMIN CONTROLLERS */
 
   @UseGuards(JwtAuthGuard)
   @Post('profile')

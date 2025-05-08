@@ -15,11 +15,11 @@ export class UserReadPrivateDTO {
   role: UserRole;
   presenceStatus: PresenceStatus;
   accountStatus: AccountStatus;
-  jobTitle?: string;
-  profileImage?: string;
-  bannerImage?: string;
-  professionalBio?: string;
-  lastLogin?: Date;
+  jobTitle?: string | null;
+  profileImage?: string | null;
+  bannerImage?: string | null;
+  professionalBio?: string | null;
+  lastLogin?: Date | null;
   companyInfo?: CompanyInformationReadDTO;
   notificationPreferences?: PreferencesNotificationReadDTO;
   securitySettings?: SecuritySettingsReadDTO;

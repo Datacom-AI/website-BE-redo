@@ -1,30 +1,43 @@
 import { v4 as uuidv4 } from 'uuid';
 import * as path from 'node:path';
-import * as fs from 'fs';
-import { NotFoundException } from '@nestjs/common';
+import * as fs from 'fs/promises';
+import { BadRequestException, Logger } from '@nestjs/common';
 
-export function createImageName(avatar: Express.Multer.File): string {
-  console.log('avatar', avatar);
-  const ext = path.extname(avatar.originalname);
-  const name = path.basename(avatar.originalname, ext);
+const logger = new Logger('ImageUtils');
+
+export function createImageName(image: Express.Multer.File): string {
+  if (!image || !image.originalname) {
+    logger.error('Invalid image object');
+    throw new BadRequestException('Invalid image object');
+  }
+  const ext = path.extname(image.originalname);
+  const name = path.basename(image.originalname, ext);
   const newName = `${name}-${uuidv4()}${ext}`;
   return newName;
 }
 
-export function saveImage(image: Express.Multer.File, path: string): void {
+export async function saveImage(
+  image: Express.Multer.File,
+  imagePath: string,
+): Promise<void> {
   try {
-    fs.writeFileSync(path, image.buffer);
+    await fs.writeFile(imagePath, image.buffer);
   } catch (error) {
-    console.error('Error saving image:', error);
-    throw new NotFoundException('Error saving image');
+    console.error(`Error saving image to ${imagePath}:`, error);
+    throw new BadRequestException('Error saving image');
   }
 }
 
-export function removeImage(imagePath: string): void {
+export async function removeImage(imagePath: string): Promise<void> {
   try {
-    fs.unlinkSync(imagePath);
+    await fs.unlink(imagePath);
   } catch (error) {
-    console.error('Error removing image:', error);
-    throw new NotFoundException('Error removing image');
+    if (error.code === 'ENOENT') {
+      logger.warn(`Image not found at ${imagePath}, skipping removal`);
+      return;
+    }
+
+    logger.error(`Error removing image at ${imagePath}:`, error);
+    throw new BadRequestException('Error removing image');
   }
 }

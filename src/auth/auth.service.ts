@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import {
   BadRequestException,
   Injectable,
+  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -18,7 +19,6 @@ import { AuthLoginDTO } from 'src/common/DTO/auth/auth.login.dto';
 import { Payload } from 'src/common/interface';
 import { AuthForgotPasswordDTO } from 'src/common/DTO/auth/auth.forgotPassword.dto';
 import { AuthResetPasswordDTO } from 'src/common/DTO/auth/auth.resetPassword.dto';
-import { UserReadPrivateDTO } from 'src/common/DTO/user/user.private.Read.dto';
 import { UserReadMinimalDTO } from 'src/common/DTO/others/userMinimal.Read.dto';
 
 @Injectable()
@@ -29,6 +29,8 @@ export class AuthService {
     private mailerService: MailerService,
     private configService: ConfigService,
   ) {}
+
+  private readonly logger = new Logger(AuthService.name);
 
   async registerService(dto: AuthRegisterDTO): Promise<User> {
     const { name, email, password, confirmPassword } = dto;
@@ -79,7 +81,7 @@ export class AuthService {
       context: { name, code: verificationCode },
     });
 
-    console.log(`Verification code sent to ${email}: ${verificationCode}`);
+    this.logger.log(`Verification code sent to ${email}: ${verificationCode}`);
 
     return user;
   }
@@ -119,7 +121,7 @@ export class AuthService {
       },
     });
 
-    console.log(`Email verified for user: ${email}`);
+    this.logger.log(`Email verified for user: ${email}`);
 
     return updatedUser;
   }
@@ -214,6 +216,85 @@ export class AuthService {
       } as UserReadMinimalDTO,
     };
   }
+
+  /*
+    ADMIN SERVICES
+  */
+  async adminRegisterService(adminData: {
+    username: string;
+    password: string;
+    email?: string;
+  }): Promise<{
+    id: string;
+    username: string;
+    email?: string;
+  }> {
+    try {
+      const salt = await bcryptjs.genSalt(10);
+      const hashedPassword = await bcryptjs.hash(adminData.password, salt);
+
+      const admin = await this.prisma.admin.create({
+        data: {
+          username: adminData.username,
+          password: hashedPassword,
+          email: adminData.email,
+        },
+      });
+
+      return {
+        id: admin.id,
+        username: admin.username,
+        email: admin.email || undefined,
+      };
+    } catch (error) {
+      this.logger.error('Admin registration failed:', error);
+      if (error.code === 'P2002') {
+        throw new BadRequestException(
+          'Admin with this username already exists',
+        );
+      }
+
+      throw new BadRequestException('Admin registration failed');
+    }
+  }
+
+  async adminLoginService(
+    username: string,
+    password: string,
+  ): Promise<{ accessToken: string }> {
+    if (!username || !password) {
+      throw new BadRequestException('Username and password are required');
+    }
+
+    const admin = await this.prisma.admin.findUnique({
+      where: { username, deletedAt: null },
+    });
+
+    if (!admin) {
+      throw new BadRequestException('Invalid username or password');
+    }
+
+    const isPasswordValid = await bcryptjs.compare(password, admin.password);
+
+    if (!isPasswordValid) {
+      throw new BadRequestException('Invalid username or password');
+    }
+
+    const payload = { id: admin.id, username: admin.username };
+    const accessToken = this.jwtService.sign(payload, {
+      secret: this.configService.get<string>('JWT_SECRET'),
+      expiresIn: '1h',
+    });
+
+    await this.prisma.admin.update({
+      where: { id: admin.id },
+      data: { lastLogin: new Date() },
+    });
+
+    return { accessToken };
+  }
+
+  /* END OF ADMIN SERVICES */
 
   async refreshTokenService(
     refreshToken: string,

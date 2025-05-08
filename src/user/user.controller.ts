@@ -11,6 +11,7 @@ import {
   UploadedFiles,
   HttpCode,
   HttpStatus,
+  BadRequestException,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { UserUpdateCredentialDTO } from 'src/common/DTO/user/user.credential.dto';
@@ -24,6 +25,7 @@ import { ImageOption } from 'src/common/interceptor/image.interceptor';
 import { PreferencesNotificationUpdateDTO } from 'src/common/DTO/preferences/preferences.notification.Update.dto';
 import { SecuritySettingsUpdateDTO } from 'src/common/DTO/securitySettings/securitySettings.Update.dto';
 import { PreferencesApplicationUpdateDTO } from 'src/common/DTO/preferences/preferences.application.Update.dto';
+import { ApiBody, ApiConsumes } from '@nestjs/swagger';
 
 @Controller('user')
 @UseGuards(JwtAuthGuard, RoleGuard)
@@ -103,7 +105,32 @@ export class UserController {
   @Post('upload-image')
   @Roles('manufacturer', 'brand', 'retailer')
   @HttpCode(HttpStatus.OK)
-  @UseInterceptors(FilesInterceptor('images', 2, ImageOption))
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        profileImage: { type: 'string', format: 'binary' },
+        bannerImage: { type: 'string', format: 'binary' },
+      },
+    },
+  })
+  @UseInterceptors(
+    FilesInterceptor('files', 2, {
+      ...ImageOption,
+      fileFilter: (req, file, callback) => {
+        if (!['profileImage', 'bannerImage'].includes(file.fieldname)) {
+          return callback(
+            new BadRequestException(
+              'Invalid field name. Use profileImage or bannerImage',
+            ),
+            false,
+          );
+        }
+        callback(null, true);
+      },
+    }),
+  )
   async uploadImage(
     @Request() req,
     @UploadedFiles() files: Express.Multer.File[],
@@ -114,7 +141,7 @@ export class UserController {
   @Delete('profile')
   @Roles('manufacturer', 'brand', 'retailer')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async deleteProfile(@Request() req): Promise<void> {
+  async deleteProfile(@Request() req: any): Promise<void> {
     await this.userService.deleteUserService(req.user.id);
   }
 }
