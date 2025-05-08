@@ -8,7 +8,11 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from 'src/prisma.service';
 import { UserUpdateDTO } from 'src/common/DTO/user/user.profile.Update.dto';
-import { UserReadPrivateDTO } from 'src/common/dto/user/user.private.Read.dto';
+import { UserReadPrivateDTO } from 'src/common/DTO/user/user.private.Read.dto';
+import { UserUpdateCredentialDTO } from 'src/common/DTO/user/user.credential.dto';
+import { PreferencesNotificationUpdateDTO } from 'src/common/DTO/preferences/preferences.notification.Update.dto';
+import { SecuritySettingsUpdateDTO } from 'src/common/DTO/securitySettings/securitySettings.Update.dto';
+import { PreferencesApplicationUpdateDTO } from 'src/common/DTO/preferences/preferences.application.Update.dto';
 import { User, UserRole } from 'generated/prisma';
 import {
   createImageName,
@@ -16,13 +20,7 @@ import {
   removeImage,
 } from 'src/common/utils/image.utils';
 import * as path from 'node:path';
-import * as bcrypt from 'bcrypt';
-
-export interface UserPasswordUpdateDTO {
-  oldPassword: string;
-  newPassword: string;
-  confirmPassword: string;
-}
+import * as bcryptjs from 'bcryptjs';
 
 @Injectable()
 export class UserService {
@@ -42,10 +40,11 @@ export class UserService {
       email: user.email,
       name: user.name,
       role: user.role,
-      status: user.accountStatus,
+      presenceStatus: user.presenceStatus,
+      accountStatus: user.accountStatus,
       jobTitle: user.jobTitle,
-      profileImageUrl: user.profileImage,
-      bannerImageUrl: user.bannerImage,
+      profileImage: user.profileImage,
+      bannerImage: user.bannerImage,
       professionalBio: user.professionalBio,
       lastLogin: user.lastLogin,
       companyInfo: user.companyInfo,
@@ -63,8 +62,7 @@ export class UserService {
   }
 
   // CRUD Methods
-
-  async findAll(): Promise<UserReadPrivateDTO[]> {
+  async findAllService(): Promise<UserReadPrivateDTO[]> {
     const users = await this.prisma.user.findMany({
       include: {
         companyInfo: true,
@@ -81,10 +79,10 @@ export class UserService {
         },
       },
     });
-    return users.map((user) => this.mapUserToDTO(user));
+    return users.map((users) => this.mapUserToDTO(users));
   }
 
-  async findOne(id: string): Promise<UserReadPrivateDTO> {
+  async findOneService(id: string): Promise<UserReadPrivateDTO> {
     if (!id) {
       throw new BadRequestException('User ID is required');
     }
@@ -118,7 +116,7 @@ export class UserService {
     }
   }
 
-  async findByEmail(email: string): Promise<UserReadPrivateDTO> {
+  async findByEmailService(email: string): Promise<UserReadPrivateDTO> {
     if (!email) {
       throw new BadRequestException('Email is required');
     }
@@ -152,15 +150,15 @@ export class UserService {
     }
   }
 
-  async create(userData: {
+  async createUserService(userData: {
     email: string;
     name: string;
     password: string;
     role: UserRole;
   }): Promise<UserReadPrivateDTO> {
     try {
-      const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash(userData.password, salt);
+      const salt = await bcryptjs.genSalt(10);
+      const hashedPassword = await bcryptjs.hash(userData.password, salt);
       const user = await this.prisma.user.create({
         data: {
           email: userData.email,
@@ -194,7 +192,7 @@ export class UserService {
     }
   }
 
-  async deleteUser(id: string): Promise<void> {
+  async deleteUserService(id: string): Promise<void> {
     const user = await this.prisma.user.findUnique({ where: { id } });
     if (!user) {
       throw new NotFoundException('User not found');
@@ -212,12 +210,11 @@ export class UserService {
   }
 
   // Profile Management
-
   async getProfile(userId: string): Promise<UserReadPrivateDTO> {
-    return await this.findOne(userId);
+    return await this.findOneService(userId);
   }
 
-  async updateProfile(
+  async updateProfileService(
     userId: string,
     userRole: UserRole,
     dto: UserUpdateDTO,
@@ -228,6 +225,27 @@ export class UserService {
       professionalBio: dto.professionalBio,
       isProfilePublic: dto.isProfilePublic,
     };
+
+    // Handle socialLinks
+    if (dto.socialLinks) {
+      updateData.socialLinks = {
+        deleteMany: {}, // Clear existing links
+        create: dto.socialLinks.map((link) => ({
+          platform: link.platform,
+          url: link.url,
+        })),
+      };
+    }
+
+    // Handle companyInfo
+    if (dto.companyInfo) {
+      updateData.companyInfo = {
+        upsert: {
+          create: dto.companyInfo,
+          update: dto.companyInfo,
+        },
+      };
+    }
 
     // Role-specific profile updates
     if (dto.manufacturerProfile && userRole !== 'manufacturer') {
@@ -273,31 +291,39 @@ export class UserService {
       };
     }
 
-    const user = await this.prisma.user.update({
-      where: { id: userId },
-      data: updateData,
-      include: {
-        companyInfo: true,
-        notificationPreferences: true,
-        securitySettings: true,
-        applicationPreferences: true,
-        socialLinks: true,
-        profile: {
-          include: {
-            manufacturerDetails: true,
-            brandDetails: true,
-            retailerDetails: true,
+    try {
+      const user = await this.prisma.user.update({
+        where: { id: userId },
+        data: updateData,
+        include: {
+          companyInfo: true,
+          notificationPreferences: true,
+          securitySettings: true,
+          applicationPreferences: true,
+          socialLinks: true,
+          profile: {
+            include: {
+              manufacturerDetails: true,
+              brandDetails: true,
+              retailerDetails: true,
+            },
           },
         },
-      },
-    });
-
-    return this.mapUserToDTO(user);
+      });
+      return this.mapUserToDTO(user);
+    } catch (error) {
+      if (error.code === 'P2002') {
+        throw new ConflictException(
+          'Email or other unique field already exists',
+        );
+      }
+      throw new BadRequestException('Invalid data provided');
+    }
   }
 
-  async updatePassword(
+  async updatePasswordService(
     userId: string,
-    dto: UserPasswordUpdateDTO,
+    dto: UserUpdateCredentialDTO,
   ): Promise<UserReadPrivateDTO> {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) {
@@ -308,7 +334,7 @@ export class UserService {
       throw new BadRequestException('All password fields are required');
     }
 
-    const isOldPasswordValid = await bcrypt.compare(
+    const isOldPasswordValid = await bcryptjs.compare(
       dto.oldPassword,
       user.password,
     );
@@ -322,8 +348,8 @@ export class UserService {
       );
     }
 
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(dto.newPassword, salt);
+    const salt = await bcryptjs.genSalt(10);
+    const hashedPassword = await bcryptjs.hash(dto.newPassword, salt);
 
     const updatedUser = await this.prisma.user.update({
       where: { id: userId },
@@ -347,7 +373,121 @@ export class UserService {
     return this.mapUserToDTO(updatedUser);
   }
 
-  async uploadImages(
+  async updateNotificationPreferencesService(
+    userId: string,
+    dto: PreferencesNotificationUpdateDTO,
+  ): Promise<UserReadPrivateDTO> {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const updatedUser = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        notificationPreferences: {
+          upsert: {
+            create: dto,
+            update: dto,
+          },
+        },
+      },
+      include: {
+        companyInfo: true,
+        notificationPreferences: true,
+        securitySettings: true,
+        applicationPreferences: true,
+        socialLinks: true,
+        profile: {
+          include: {
+            manufacturerDetails: true,
+            brandDetails: true,
+            retailerDetails: true,
+          },
+        },
+      },
+    });
+
+    return this.mapUserToDTO(updatedUser);
+  }
+
+  async updateSecuritySettingsService(
+    userId: string,
+    dto: SecuritySettingsUpdateDTO,
+  ): Promise<UserReadPrivateDTO> {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const updatedUser = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        securitySettings: {
+          upsert: {
+            create: dto,
+            update: dto,
+          },
+        },
+      },
+      include: {
+        companyInfo: true,
+        notificationPreferences: true,
+        securitySettings: true,
+        applicationPreferences: true,
+        socialLinks: true,
+        profile: {
+          include: {
+            manufacturerDetails: true,
+            brandDetails: true,
+            retailerDetails: true,
+          },
+        },
+      },
+    });
+
+    return this.mapUserToDTO(updatedUser);
+  }
+
+  async updateApplicationPreferencesService(
+    userId: string,
+    dto: PreferencesApplicationUpdateDTO,
+  ): Promise<UserReadPrivateDTO> {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const updatedUser = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        applicationPreferences: {
+          upsert: {
+            create: dto,
+            update: dto,
+          },
+        },
+      },
+      include: {
+        companyInfo: true,
+        notificationPreferences: true,
+        securitySettings: true,
+        applicationPreferences: true,
+        socialLinks: true,
+        profile: {
+          include: {
+            manufacturerDetails: true,
+            brandDetails: true,
+            retailerDetails: true,
+          },
+        },
+      },
+    });
+
+    return this.mapUserToDTO(updatedUser);
+  }
+
+  async uploadImagesService(
     userId: string,
     files: Express.Multer.File[],
   ): Promise<UserReadPrivateDTO> {

@@ -1,4 +1,4 @@
-import { SupplierStatus } from 'generated/prisma';
+import { Status } from 'generated/prisma';
 
 import { SupplierCategoryReadDTO } from './supplier.category.Read.dto';
 import { SupplierMaterialReadDTO } from './supplier.material.Read.dto';
@@ -20,7 +20,7 @@ export class SupplierReadDTO {
 
   fullAddress?: string | null;
   description?: string | null;
-  status: SupplierStatus;
+  status: Status;
   reliabilityRating?: number | null;
   leadTime?: string | null;
 

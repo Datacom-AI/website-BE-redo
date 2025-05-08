@@ -1,8 +1,8 @@
 import { IsEnum, IsNotEmpty } from 'class-validator';
-import { OrderStatus } from 'generated/prisma';
+import { Status } from 'generated/prisma';
 
 export class OrderUpdateStatusDTO {
   @IsNotEmpty()
-  @IsEnum(OrderStatus)
-  status: OrderStatus;
+  @IsEnum(Status)
+  status: Status;
 }

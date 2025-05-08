@@ -14,7 +14,7 @@ import { AuthRegisterDTO } from 'src/common/DTO/auth/auth.register.dto';
 import { AuthLoginDTO } from 'src/common/DTO/auth/auth.login.dto';
 import { AuthForgotPasswordDTO } from 'src/common/DTO/auth/auth.forgotPassword.dto';
 import { AuthResetPasswordDTO } from 'src/common/DTO/auth/auth.resetPassword.dto';
-import { UserReadPrivateDTO } from 'src/common/dto/user/user.private.Read.dto';
+import { UserReadPrivateDTO } from 'src/common/DTO/user/user.private.Read.dto';
 import { User } from 'generated/prisma';
 import { JwtAuthGuard } from 'src/common/guards/jwtAuth.guard';
 import { AuthVerifyEmailDTO } from 'src/common/DTO/auth/auth.verifyEmail.dto';
@@ -49,7 +49,7 @@ export class AuthController {
     return await this.authService.chooseRoleService(dto);
   }
 
-  @Post('/login')
+  @Post('login')
   @HttpCode(HttpStatus.OK)
   async login(@Body() dto: AuthLoginDTO): Promise<{
     accessToken: string;
@@ -80,7 +80,15 @@ export class AuthController {
     };
   }
 
-  @Post('/reset-password')
+  @Post('resend-password-reset')
+  @HttpCode(HttpStatus.OK)
+  async resendPasswordReset(
+    @Body('email') email: string,
+  ): Promise<{ message: string }> {
+    return await this.authService.resendPasswordReset(email);
+  }
+
+  @Post('reset-password')
   @HttpCode(HttpStatus.OK)
   async resetPassword(
     @Body() dto: AuthResetPasswordDTO,

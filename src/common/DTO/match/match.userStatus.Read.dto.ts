@@ -1,11 +1,11 @@
-import { MatchingStatus } from 'generated/prisma';
+import { ConnectionStatus } from 'generated/prisma';
 
 export class MatchUserStatusReadDTO {
   id: string;
   userId: string;
   matchId: string;
 
-  status: MatchingStatus;
+  status: ConnectionStatus;
   isStarred: boolean;
 
   createdAt: Date;

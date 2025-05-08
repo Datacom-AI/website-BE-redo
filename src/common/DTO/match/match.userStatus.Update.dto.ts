@@ -5,7 +5,7 @@ import {
   IsOptional,
   IsUUID,
 } from 'class-validator';
-import { MatchingStatus } from 'generated/prisma';
+import { ConnectionStatus } from 'generated/prisma';
 
 export class MatchUserStatusUpdateDTO {
   @IsNotEmpty()
@@ -13,8 +13,8 @@ export class MatchUserStatusUpdateDTO {
   matchId: string;
 
   @IsOptional()
-  @IsEnum(MatchingStatus)
-  status?: MatchingStatus;
+  @IsEnum(ConnectionStatus)
+  status?: ConnectionStatus;
 
   @IsOptional()
   @IsBoolean()

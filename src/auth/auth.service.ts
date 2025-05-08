@@ -1,4 +1,4 @@
-import * as bcrypt from 'bcrypt';
+import * as bcryptjs from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
 
 import {
@@ -18,7 +18,7 @@ import { AuthLoginDTO } from 'src/common/DTO/auth/auth.login.dto';
 import { Payload } from 'src/common/interface';
 import { AuthForgotPasswordDTO } from 'src/common/DTO/auth/auth.forgotPassword.dto';
 import { AuthResetPasswordDTO } from 'src/common/DTO/auth/auth.resetPassword.dto';
-import { UserReadPrivateDTO } from 'src/common/dto/user/user.private.Read.dto';
+import { UserReadPrivateDTO } from 'src/common/DTO/user/user.private.Read.dto';
 import { UserReadMinimalDTO } from 'src/common/DTO/others/userMinimal.Read.dto';
 
 @Injectable()
@@ -47,8 +47,8 @@ export class AuthService {
       );
     }
 
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
+    const salt = await bcryptjs.genSalt(10);
+    const hashedPassword = await bcryptjs.hash(password, salt);
     const verificationCode = Math.floor(
       100000 + Math.random() * 900000,
     ).toString();
@@ -75,7 +75,7 @@ export class AuthService {
     await this.mailerService.sendMail({
       to: email,
       subject: 'Email Verification',
-      template: './verification',
+      template: 'verification',
       context: { name, code: verificationCode },
     });
 
@@ -111,9 +111,42 @@ export class AuthService {
       data: { isUsed: true, usedAt: new Date() },
     });
 
+    const updatedUser = await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        presenceStatus: 'online',
+        accountStatus: 'active',
+      },
+    });
+
     console.log(`Email verified for user: ${email}`);
 
-    return user;
+    return updatedUser;
+  }
+
+  async resendVerificationService(email: string): Promise<void> {
+    const user = await this.prisma.user.findUnique({ where: { email } });
+    if (!user || user.accountStatus !== 'pending') {
+      throw new BadRequestException('User not found or already verified');
+    }
+
+    const verificationCode = Math.floor(
+      100000 + Math.random() * 900000,
+    ).toString();
+    await this.prisma.passwordResetToken.create({
+      data: {
+        userId: user.id,
+        token: verificationCode,
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+      },
+    });
+
+    await this.mailerService.sendMail({
+      to: email,
+      subject: 'Email Verification',
+      template: 'verification',
+      context: { name: user.name, code: verificationCode },
+    });
   }
 
   async chooseRoleService(dto: AuthChooseRoleDTO): Promise<User> {
@@ -136,17 +169,9 @@ export class AuthService {
         accountStatus: 'active',
         presenceStatus: 'online',
       },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        accountStatus: true,
-        presenceStatus: true,
-      },
     });
 
-    return user; //TODO
+    return updatedUser;
   }
 
   async loginService(dto: AuthLoginDTO): Promise<{
@@ -164,7 +189,7 @@ export class AuthService {
       throw new BadRequestException('Invalid credentials or inactive account');
     }
 
-    const isPasswordValid = await bcrypt.compare(password, user.password);
+    const isPasswordValid = await bcryptjs.compare(password, user.password);
 
     if (!isPasswordValid) {
       throw new BadRequestException('Invalid email or password');
@@ -243,7 +268,7 @@ export class AuthService {
     await this.mailerService.sendMail({
       to: email,
       subject: 'Password Reset Request',
-      template: './reset-password',
+      template: 'reset-password',
       context: {
         name: user.name,
         resetUrl,
@@ -251,6 +276,38 @@ export class AuthService {
     });
 
     return user;
+  }
+
+  async resendPasswordReset(email: string): Promise<{ message: string }> {
+    const user = await this.prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      return { message: 'If the email exists, a reset link has been sent' };
+    }
+
+    const resetToken = uuidv4();
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+    await this.prisma.passwordResetToken.create({
+      data: {
+        userId: user.id,
+        token: resetToken,
+        expiresAt,
+      },
+    });
+
+    const resetUrl = `${this.configService.get<string>('FRONTEND_URL')}/reset-password?token=${resetToken}`;
+
+    await this.mailerService.sendMail({
+      to: email,
+      subject: 'Password Reset Request',
+      template: 'reset-password',
+      context: {
+        name: user.name,
+        resetUrl,
+      },
+    });
+
+    return { message: 'If the email exists, a reset link has been sent' };
   }
 
   async resetPasswordService(dto: AuthResetPasswordDTO): Promise<void> {
@@ -269,8 +326,8 @@ export class AuthService {
       throw new BadRequestException('Invalid or expired reset token');
     }
 
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(newPassword, salt);
+    const salt = await bcryptjs.genSalt(10);
+    const hashedPassword = await bcryptjs.hash(newPassword, salt);
 
     await this.prisma.$transaction([
       this.prisma.user.update({

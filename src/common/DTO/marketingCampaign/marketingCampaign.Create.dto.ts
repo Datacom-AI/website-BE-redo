@@ -9,7 +9,7 @@ import {
   IsObject,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { CampaignStatus, CampaignType } from 'generated/prisma';
+import { Status, CampaignType } from 'generated/prisma';
 
 export class MarketingCampaignCreateDTO {
   @IsNotEmpty()
@@ -41,8 +41,8 @@ export class MarketingCampaignCreateDTO {
   campaignType?: CampaignType;
 
   @IsOptional()
-  @IsEnum(CampaignStatus)
-  status?: CampaignStatus;
+  @IsEnum(Status)
+  status?: Status;
 
   @IsOptional()
   @Type(() => Number)

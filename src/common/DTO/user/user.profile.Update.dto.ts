@@ -37,10 +37,18 @@
 //   status?: Status;
 // }
 
-import { IsOptional, IsString, IsBoolean, IsObject } from 'class-validator';
+import {
+  IsOptional,
+  IsString,
+  IsBoolean,
+  IsObject,
+  IsArray,
+} from 'class-validator';
 import { ManufacturerProfileReadDTO } from '../manufacturer/manufacturer.profile.Read.dto';
 import { BrandProfileReadDTO } from '../brand/brand.profile.Read.dto';
 import { RetailerProfileReadDTO } from '../retailer/retailer.profile.Read.dto';
+import { SocialReadDTO } from './user.public.Read.dto';
+import { CompanyInformationReadDTO } from '../company/company.information.Read.dto';
 
 export class UserUpdateDTO {
   @IsOptional()
@@ -58,6 +66,14 @@ export class UserUpdateDTO {
   @IsOptional()
   @IsBoolean()
   isProfilePublic?: boolean;
+
+  @IsOptional()
+  @IsArray()
+  socialLinks?: SocialReadDTO[];
+
+  @IsOptional()
+  @IsObject()
+  companyInfo?: CompanyInformationReadDTO;
 
   @IsOptional()
   @IsObject()

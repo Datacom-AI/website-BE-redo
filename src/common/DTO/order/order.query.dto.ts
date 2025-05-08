@@ -8,7 +8,7 @@ import {
   Min,
   IsIn,
 } from 'class-validator';
-import { OrderStatus } from 'generated/prisma';
+import { Status } from 'generated/prisma';
 
 export class OrderQueryDTO {
   @IsOptional()
@@ -16,8 +16,8 @@ export class OrderQueryDTO {
   userId?: string;
 
   @IsOptional()
-  @IsEnum(OrderStatus)
-  status?: OrderStatus;
+  @IsEnum(Status)
+  status?: Status;
 
   @IsOptional()
   @Type(() => Date)

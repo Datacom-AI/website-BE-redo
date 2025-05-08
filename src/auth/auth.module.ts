@@ -8,6 +8,7 @@ import { PrismaService } from 'src/prisma.service';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handlebars.adapter';
+import { join } from 'path';
 
 @Module({
   imports: [
@@ -36,7 +37,7 @@ import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handleba
           from: `"No Reply" <${configService.get<string>('SMTP_USER')}>`,
         },
         template: {
-          dir: process.cwd() + '/templates/',
+          dir: join(__dirname, '../../src/common/templates'),
           adapter: new HandlebarsAdapter(),
           options: { strict: true },
         },

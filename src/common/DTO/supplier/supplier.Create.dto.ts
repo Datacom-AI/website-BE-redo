@@ -8,7 +8,7 @@ import {
   IsEnum,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { SupplierStatus } from 'generated/prisma';
+import { Status } from 'generated/prisma';
 
 export class SupplierCreateDTO {
   @IsNotEmpty()
@@ -48,8 +48,8 @@ export class SupplierCreateDTO {
   description?: string;
 
   @IsOptional()
-  @IsEnum(SupplierStatus)
-  status?: SupplierStatus;
+  @IsEnum(Status)
+  status?: Status;
 
   @IsOptional()
   @Type(() => Number)

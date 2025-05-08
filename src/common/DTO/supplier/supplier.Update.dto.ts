@@ -7,7 +7,7 @@ import {
   IsUUID,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { SupplierStatus } from 'generated/prisma';
+import { Status } from 'generated/prisma';
 
 export class SupplierUpdateDTO {
   @IsOptional()
@@ -47,8 +47,8 @@ export class SupplierUpdateDTO {
   description?: string;
 
   @IsOptional()
-  @IsEnum(SupplierStatus)
-  status?: SupplierStatus;
+  @IsEnum(Status)
+  status?: Status;
 
   @IsOptional()
   @Type(() => Number)

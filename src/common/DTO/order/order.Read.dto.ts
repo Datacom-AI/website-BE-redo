@@ -1,4 +1,4 @@
-import { OrderStatus } from 'generated/prisma';
+import { Status } from 'generated/prisma';
 import {
   ReviewAuthorReadDTO,
   ReviewProductReadDTO,
@@ -12,7 +12,7 @@ export class OrderReadDTO {
 
   quantity: number;
   totalPrice: number;
-  orderStatus: OrderStatus;
+  orderStatus: Status;
 
   createdAt: Date;
   updatedAt: Date;
