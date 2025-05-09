@@ -24,6 +24,7 @@ export async function saveImage(
     await fs.writeFile(imagePath, image.buffer);
   } catch (error) {
     console.error(`Error saving image to ${imagePath}:`, error);
+
     throw new BadRequestException('Error saving image');
   }
 }
@@ -34,6 +35,7 @@ export async function removeImage(imagePath: string): Promise<void> {
   } catch (error) {
     if (error.code === 'ENOENT') {
       logger.warn(`Image not found at ${imagePath}, skipping removal`);
+
       return;
     }
 

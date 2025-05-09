@@ -21,6 +21,8 @@ import { AuthVerifyEmailDTO } from 'src/common/DTO/auth/auth.verifyEmail.dto';
 import { AuthChooseRoleDTO } from 'src/common/DTO/auth/auth.chooseRole.dto';
 import { UserReadMinimalDTO } from 'src/common/DTO/others/userMinimal.Read.dto';
 import { ApiTags } from '@nestjs/swagger';
+import { RoleGuard } from 'src/common/guards/role.guard';
+import { Roles } from 'src/common/decorators/role.decorator';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -106,6 +108,8 @@ export class AuthController {
 
   @Post('admin/register')
   @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard, RoleGuard)
+  @Roles('admin')
   async adminRegister(
     @Body()
     body: {

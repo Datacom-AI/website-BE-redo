@@ -18,21 +18,43 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: any) {
-    const user = await this.prisma.user.findUnique({
-      where: { id: payload.id },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        accountStatus: true,
-      },
-    });
+    if (payload.role === 'admin') {
+      // admin validation
+      const admin = await this.prisma.admin.findUnique({
+        where: { id: payload.id, deletedAt: null },
+        select: {
+          id: true,
+          username: true,
+        },
+      });
 
-    if (!user || user.accountStatus !== 'active') {
-      throw new UnauthorizedException('Invalid user or inactive account');
+      if (!admin) {
+        throw new UnauthorizedException('Invalid admin credentials');
+      }
+
+      return { id: admin.id, username: admin.username, role: 'admin' };
+    } else {
+      const user = await this.prisma.user.findUnique({
+        where: { id: payload.id },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+          accountStatus: true,
+        },
+      });
+
+      if (!user || user.accountStatus !== 'active') {
+        throw new UnauthorizedException('Invalid user or inactive account');
+      }
+
+      return {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+      };
     }
-
-    return { id: user.id, email: user.email, name: user.name, role: user.role };
   }
 }

@@ -32,6 +32,8 @@ export class UserService {
     private configService: ConfigService,
   ) {}
 
+  private readonly logger = new Logger(UserService.name);
+
   private getUploadPath(subdir: 'profile-image' | 'banner-image'): string {
     const basePath =
       this.configService.get<string>('UPLOAD_PATH') || './uploads';
@@ -49,7 +51,9 @@ export class UserService {
     }
   }
 
-  private readonly logger = new Logger(UserService.name);
+  private generateBackupCode(): string {
+    return Math.random().toString(36).substring(2, 10).toUpperCase();
+  }
 
   private mapUserToDTO(
     user: User & {
@@ -79,7 +83,29 @@ export class UserService {
       lastLogin: user.lastLogin,
       companyInfo: user.companyInfo,
       notificationPreferences: user.notificationPreferences,
-      securitySettings: user.securitySettings,
+      securitySettings: user.securitySettings
+        ? {
+            id: user.securitySettings.id,
+            userId: user.securitySettings.userId,
+            twoFactorAuthentication:
+              user.securitySettings.twoFactorAuthentication,
+            twoFactorConfirmed: user.securitySettings.twoFactorConfirmed,
+            alertNewLogin: user.securitySettings.alertNewLogin,
+            alertNewDeviceLogin: user.securitySettings.alertNewDeviceLogin,
+            alertPasswordChanges: user.securitySettings.alertPasswordChanges,
+            alertSuspiciousActivity:
+              user.securitySettings.alertSuspiciousActivity,
+            backupCodes: user.securitySettings.backupCodes?.map((code) => ({
+              id: code.id,
+              code: code.code,
+              isUsed: code.isUsed,
+              usedAt: code.usedAt,
+              createdAt: code.createdAt,
+            })),
+            createdAt: user.securitySettings.createdAt,
+            updatedAt: user.securitySettings.updatedAt,
+          }
+        : undefined,
       applicationPreferences: user.applicationPreferences,
       socialLinks: user.socialLinks,
       manufacturerProfile:
@@ -108,7 +134,11 @@ export class UserService {
         socialLinks: true,
         profile: {
           include: {
-            manufacturerDetails: true,
+            manufacturerDetails: {
+              include: {
+                manufacturingCapability: true,
+              },
+            },
             brandDetails: true,
             retailerDetails: true,
           },
@@ -134,7 +164,11 @@ export class UserService {
           socialLinks: true,
           profile: {
             include: {
-              manufacturerDetails: true,
+              manufacturerDetails: {
+                include: {
+                  manufacturingCapability: true,
+                },
+              },
               brandDetails: true,
               retailerDetails: true,
             },
@@ -168,7 +202,11 @@ export class UserService {
           socialLinks: true,
           profile: {
             include: {
-              manufacturerDetails: true,
+              manufacturerDetails: {
+                include: {
+                  manufacturingCapability: true,
+                },
+              },
               brandDetails: true,
               retailerDetails: true,
             },
@@ -214,7 +252,11 @@ export class UserService {
           socialLinks: true,
           profile: {
             include: {
-              manufacturerDetails: true,
+              manufacturerDetails: {
+                include: {
+                  manufacturingCapability: true,
+                },
+              },
               brandDetails: true,
               retailerDetails: true,
             },
@@ -234,6 +276,7 @@ export class UserService {
     const user = await this.prisma.user.findUnique({
       where: { id, deletedAt: null },
     });
+
     if (!user) {
       throw new NotFoundException('User not found');
     }
@@ -243,24 +286,37 @@ export class UserService {
 
     if (user.profileImage) {
       try {
-        removeImage(path.join(profileImagePath, user.profileImage));
+        await removeImage(path.join(profileImagePath, user.profileImage));
       } catch (error) {
-        this.logger.error('Failed to remove profile image:', error);
+        this.logger.warn(
+          `Failed to remove profile image during user deletion: ${user.profileImage}`,
+          error.message,
+        );
       }
     }
 
     if (user.bannerImage) {
       try {
-        removeImage(path.join(bannerImagePath, user.bannerImage));
+        await removeImage(path.join(bannerImagePath, user.bannerImage));
       } catch (error) {
-        this.logger.error('Failed to remove banner image:', error);
+        this.logger.warn(
+          `Failed to remove banner image during user deletion: ${user.bannerImage}`,
+          error.message,
+        );
       }
     }
 
-    await this.prisma.user.update({
+    // hard delete
+    await this.prisma.user.delete({
       where: { id },
-      data: { deletedAt: new Date() },
     });
+    this.logger.log(`User with ID ${id} has been permanently deleted.`);
+
+    // soft delete
+    // await this.prisma.user.update({
+    //   where: { id },
+    //   data: { deletedAt: new Date() },
+    // });
   }
 
   // Profile Management
@@ -320,8 +376,18 @@ export class UserService {
       updateData.profile = {
         upsert: {
           create: {
+            role: userRole,
             manufacturerDetails: dto.manufacturerProfile
-              ? { create: dto.manufacturerProfile }
+              ? {
+                  create: {
+                    ...dto.manufacturerProfile,
+                    manufacturingCapability: dto.manufacturingCapability
+                      ? {
+                          create: dto.manufacturingCapability,
+                        }
+                      : undefined,
+                  },
+                }
               : undefined,
             brandDetails: dto.brandProfile
               ? { create: dto.brandProfile }
@@ -332,7 +398,19 @@ export class UserService {
           },
           update: {
             manufacturerDetails: dto.manufacturerProfile
-              ? { update: dto.manufacturerProfile }
+              ? {
+                  update: {
+                    ...dto.manufacturerProfile,
+                    manufacturingCapability: dto.manufacturingCapability
+                      ? {
+                          upsert: {
+                            create: dto.manufacturingCapability,
+                            update: dto.manufacturingCapability,
+                          },
+                        }
+                      : undefined,
+                  },
+                }
               : undefined,
             brandDetails: dto.brandProfile
               ? { update: dto.brandProfile }
@@ -357,13 +435,18 @@ export class UserService {
           socialLinks: true,
           profile: {
             include: {
-              manufacturerDetails: true,
+              manufacturerDetails: {
+                include: {
+                  manufacturingCapability: true,
+                },
+              },
               brandDetails: true,
               retailerDetails: true,
             },
           },
         },
       });
+
       return this.mapUserToDTO(user);
     } catch (error) {
       this.logger.error('Profile update failed:', error);
@@ -373,6 +456,8 @@ export class UserService {
           'Email or other unique field already exists',
         );
       }
+
+      // this.logger.error('Invalid data provided:', error);
       throw new BadRequestException('Invalid data provided');
     }
   }
@@ -421,7 +506,11 @@ export class UserService {
         socialLinks: true,
         profile: {
           include: {
-            manufacturerDetails: true,
+            manufacturerDetails: {
+              include: {
+                manufacturingCapability: true,
+              },
+            },
             brandDetails: true,
             retailerDetails: true,
           },
@@ -439,6 +528,7 @@ export class UserService {
     const user = await this.prisma.user.findUnique({
       where: { id: userId, deletedAt: null },
     });
+
     if (!user) {
       throw new NotFoundException('User not found');
     }
@@ -461,7 +551,11 @@ export class UserService {
         socialLinks: true,
         profile: {
           include: {
-            manufacturerDetails: true,
+            manufacturerDetails: {
+              include: {
+                manufacturingCapability: true,
+              },
+            },
             brandDetails: true,
             retailerDetails: true,
           },
@@ -479,8 +573,49 @@ export class UserService {
     const user = await this.prisma.user.findUnique({
       where: { id: userId, deletedAt: null },
     });
+
     if (!user) {
       throw new NotFoundException('User not found');
+    }
+
+    const securitySettings = await this.prisma.securitySettings.upsert({
+      where: { userId },
+      create: {
+        userId,
+        twoFactorAuthentication: dto.twoFactorAuthentication ?? false,
+        twoFactorSecret: dto.twoFactorSecret,
+        twoFactorConfirmed: dto.twoFactorConfirmed ?? false,
+        alertNewLogin: dto.alertNewLogin ?? true,
+        alertNewDeviceLogin: dto.alertNewDeviceLogin ?? false,
+        alertPasswordChanges: dto.alertPasswordChanges ?? false,
+        alertSuspiciousActivity: dto.alertSuspiciousActivity ?? false,
+      },
+      update: {
+        twoFactorAuthentication: dto.twoFactorAuthentication,
+        twoFactorSecret: dto.twoFactorSecret,
+        twoFactorConfirmed: dto.twoFactorConfirmed,
+        alertNewLogin: dto.alertNewLogin,
+        alertNewDeviceLogin: dto.alertNewDeviceLogin,
+        alertPasswordChanges: dto.alertPasswordChanges,
+        alertSuspiciousActivity: dto.alertSuspiciousActivity,
+      },
+    });
+
+    // generate new backup codes if requested
+    if (dto.generateNewBackupCodes) {
+      await this.prisma.backupCode.deleteMany({
+        where: { securitySettingsId: securitySettings.id },
+      });
+
+      const backupCodes = Array.from({ length: 10 }, () => ({
+        securitySettingsId: securitySettings.id,
+        code: this.generateBackupCode(),
+        isUsed: false,
+      }));
+
+      await this.prisma.backupCode.createMany({
+        data: backupCodes,
+      });
     }
 
     const updatedUser = await this.prisma.user.update({
@@ -501,7 +636,11 @@ export class UserService {
         socialLinks: true,
         profile: {
           include: {
-            manufacturerDetails: true,
+            manufacturerDetails: {
+              include: {
+                manufacturingCapability: true,
+              },
+            },
             brandDetails: true,
             retailerDetails: true,
           },
@@ -510,6 +649,111 @@ export class UserService {
     });
 
     return this.mapUserToDTO(updatedUser);
+  }
+
+  async generateBackupCodesService(
+    userId: string,
+  ): Promise<UserReadPrivateDTO> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId, deletedAt: null },
+      include: { securitySettings: true },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    let securitySettings = user.securitySettings;
+
+    if (!securitySettings) {
+      securitySettings = await this.prisma.securitySettings.create({
+        data: {
+          userId,
+        },
+      });
+    }
+
+    await this.prisma.backupCode.deleteMany({
+      where: { securitySettingsId: securitySettings.id },
+    });
+
+    const backupCodesData = Array.from({ length: 10 }, () => ({
+      securitySettingsId: securitySettings.id,
+      code: this.generateBackupCode(),
+      isUsed: false,
+    }));
+
+    await this.prisma.backupCode.createMany({
+      data: backupCodesData,
+    });
+
+    const updatedUser = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        companyInfo: true,
+        notificationPreferences: true,
+        securitySettings: {
+          include: {
+            backupCodes: true,
+          },
+        },
+        applicationPreferences: true,
+        socialLinks: true,
+        profile: {
+          include: {
+            manufacturerDetails: {
+              include: {
+                manufacturingCapability: true,
+              },
+            },
+            brandDetails: true,
+            retailerDetails: true,
+          },
+        },
+      },
+    });
+
+    if (!updatedUser) {
+      throw new NotFoundException(
+        'User not found after generating backup codes',
+      );
+    }
+
+    return this.mapUserToDTO(updatedUser);
+  }
+
+  async verifyBackupCodeService(
+    userId: string,
+    code: string,
+  ): Promise<{ valid: boolean; message?: string }> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId, deletedAt: null },
+      include: {
+        securitySettings: {
+          include: { backupCodes: true },
+        },
+      },
+    });
+
+    if (!user || !user.securitySettings) {
+      throw new NotFoundException('User or security settings not found');
+    }
+
+    const backupCode = user.securitySettings.backupCodes[0];
+
+    if (!backupCode) {
+      throw new NotFoundException('No backup codes found');
+    }
+
+    await this.prisma.backupCode.update({
+      where: { id: backupCode.id },
+      data: {
+        isUsed: true,
+        usedAt: new Date(),
+      },
+    });
+
+    return { valid: true, message: 'Backup code verified successfully' };
   }
 
   async updateApplicationPreferencesService(
@@ -541,7 +785,11 @@ export class UserService {
         socialLinks: true,
         profile: {
           include: {
-            manufacturerDetails: true,
+            manufacturerDetails: {
+              include: {
+                manufacturingCapability: true,
+              },
+            },
             brandDetails: true,
             retailerDetails: true,
           },
@@ -579,22 +827,23 @@ export class UserService {
         if (file.fieldname === 'profileImage') {
           imagePath = path.join(profileImagePath, imageName);
           if (user.profileImage) {
-            removeImage(path.join(profileImagePath, user.profileImage));
+            await removeImage(path.join(profileImagePath, user.profileImage));
           }
           updateData.profileImage = imageName;
         } else if (file.fieldname === 'bannerImage') {
           imagePath = path.join(bannerImagePath, imageName);
           if (user.bannerImage) {
-            removeImage(path.join(bannerImagePath, user.bannerImage));
+            await removeImage(path.join(bannerImagePath, user.bannerImage));
           }
           updateData.bannerImage = imageName;
         } else {
+          this.logger.error(`Invalid field name: ${file.fieldname}`);
           throw new BadRequestException(
             `Invalid field name: ${file.fieldname}`,
           );
         }
 
-        saveImage(file, imagePath);
+        await saveImage(file, imagePath);
       } catch (error) {
         this.logger.error(`Failed to process image ${file.fieldname}:`, error);
         throw new BadRequestException(`Failed to upload ${file.fieldname}`);
@@ -612,7 +861,11 @@ export class UserService {
         socialLinks: true,
         profile: {
           include: {
-            manufacturerDetails: true,
+            manufacturerDetails: {
+              include: {
+                manufacturingCapability: true,
+              },
+            },
             brandDetails: true,
             retailerDetails: true,
           },

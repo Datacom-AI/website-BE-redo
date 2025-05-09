@@ -49,6 +49,7 @@ import { BrandProfileReadDTO } from '../brand/brand.profile.Read.dto';
 import { RetailerProfileReadDTO } from '../retailer/retailer.profile.Read.dto';
 import { SocialReadDTO } from './user.public.Read.dto';
 import { CompanyInformationReadDTO } from '../company/company.information.Read.dto';
+import { ManufacturingCapabilityUpdateDTO } from '../manufacturingCapability/manufacturingCapability.Update.dto';
 
 export class UserUpdateDTO {
   @IsOptional()
@@ -70,6 +71,10 @@ export class UserUpdateDTO {
   @IsOptional()
   @IsArray()
   socialLinks?: SocialReadDTO[];
+
+  @IsOptional()
+  @IsObject()
+  manufacturingCapability?: ManufacturingCapabilityUpdateDTO;
 
   @IsOptional()
   @IsObject()

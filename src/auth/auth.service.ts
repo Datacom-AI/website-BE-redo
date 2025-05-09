@@ -280,7 +280,11 @@ export class AuthService {
       throw new BadRequestException('Invalid username or password');
     }
 
-    const payload = { id: admin.id, username: admin.username };
+    const payload = {
+      id: admin.id,
+      username: admin.username,
+      role: 'admin' as const,
+    };
     const accessToken = this.jwtService.sign(payload, {
       secret: this.configService.get<string>('JWT_SECRET'),
       expiresIn: '1h',

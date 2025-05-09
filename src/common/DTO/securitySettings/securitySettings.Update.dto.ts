@@ -1,9 +1,13 @@
-import { IsBoolean, IsOptional } from 'class-validator';
+import { IsBoolean, IsOptional, IsString } from 'class-validator';
 
 export class SecuritySettingsUpdateDTO {
   @IsOptional()
   @IsBoolean()
   twoFactorAuthentication?: boolean;
+
+  @IsOptional()
+  @IsString()
+  twoFactorSecret?: string;
 
   @IsOptional()
   @IsBoolean()
@@ -24,4 +28,8 @@ export class SecuritySettingsUpdateDTO {
   @IsOptional()
   @IsBoolean()
   alertSuspiciousActivity?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  generateNewBackupCodes?: boolean;
 }

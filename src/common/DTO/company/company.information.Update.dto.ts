@@ -8,7 +8,7 @@ export class CompanyInformationUpdateDTO {
 
   @IsOptional()
   @IsEmail()
-  companyEmail?: string;
+  companyEmail: string;
 
   @IsOptional()
   @IsString()

@@ -12,6 +12,8 @@ import {
   HttpCode,
   HttpStatus,
   BadRequestException,
+  Param,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { UserUpdateCredentialDTO } from 'src/common/DTO/user/user.credential.dto';
@@ -20,7 +22,10 @@ import { RoleGuard } from 'src/common/guards/role.guard';
 import { Roles } from 'src/common/decorators/role.decorator';
 import { UserUpdateDTO } from 'src/common/DTO/user/user.profile.Update.dto';
 import { UserReadPrivateDTO } from 'src/common/DTO/user/user.private.Read.dto';
-import { FilesInterceptor } from '@nestjs/platform-express';
+import {
+  FileFieldsInterceptor,
+  FilesInterceptor,
+} from '@nestjs/platform-express';
 import { ImageOption } from 'src/common/interceptor/image.interceptor';
 import { PreferencesNotificationUpdateDTO } from 'src/common/DTO/preferences/preferences.notification.Update.dto';
 import { SecuritySettingsUpdateDTO } from 'src/common/DTO/securitySettings/securitySettings.Update.dto';
@@ -90,6 +95,24 @@ export class UserController {
     );
   }
 
+  @Post('security/backup-codes/generate')
+  @Roles('manufacturer', 'brand', 'retailer')
+  async generateBackupCodes(@Request() req): Promise<UserReadPrivateDTO> {
+    return await this.userService.generateBackupCodesService(req.user.id);
+  }
+
+  @Post('security/backup-codes/verify')
+  @Roles('manufacturer', 'brand', 'retailer')
+  async verifyBackupCodes(
+    @Request() req,
+    @Body() dto: { code: string },
+  ): Promise<{ valid: boolean }> {
+    return await this.userService.verifyBackupCodeService(
+      req.user.id,
+      dto.code,
+    );
+  }
+
   @Patch('preferences/application')
   @Roles('manufacturer', 'brand', 'retailer')
   async updateApplicationPreferences(
@@ -116,26 +139,36 @@ export class UserController {
     },
   })
   @UseInterceptors(
-    FilesInterceptor('files', 2, {
-      ...ImageOption,
-      fileFilter: (req, file, callback) => {
-        if (!['profileImage', 'bannerImage'].includes(file.fieldname)) {
-          return callback(
-            new BadRequestException(
-              'Invalid field name. Use profileImage or bannerImage',
-            ),
-            false,
-          );
-        }
-        callback(null, true);
-      },
-    }),
+    FileFieldsInterceptor(
+      [
+        { name: 'profileImage', maxCount: 1 },
+        { name: 'bannerImage', maxCount: 1 },
+      ],
+
+      ImageOption,
+    ),
   )
   async uploadImage(
     @Request() req,
-    @UploadedFiles() files: Express.Multer.File[],
+    @UploadedFiles()
+    files: {
+      profileImage?: Express.Multer.File[];
+      bannerImage?: Express.Multer.File[];
+    },
   ): Promise<UserReadPrivateDTO> {
-    return await this.userService.uploadImagesService(req.user.id, files);
+    const filesToProcess: Express.Multer.File[] = [];
+    if (files.profileImage && files.profileImage[0]) {
+      filesToProcess.push(files.profileImage[0]);
+    }
+
+    if (files.bannerImage && files.bannerImage[0]) {
+      filesToProcess.push(files.bannerImage[0]);
+    }
+
+    return await this.userService.uploadImagesService(
+      req.user.id,
+      filesToProcess,
+    );
   }
 
   @Delete('profile')
@@ -143,5 +176,14 @@ export class UserController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async deleteProfile(@Request() req: any): Promise<void> {
     await this.userService.deleteUserService(req.user.id);
+  }
+
+  @Delete('admin-delete-user/:id')
+  @Roles('admin')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async adminDeleteUser(
+    @Param('id', ParseUUIDPipe) userId: string,
+  ): Promise<void> {
+    await this.userService.deleteUserService(userId);
   }
 }
