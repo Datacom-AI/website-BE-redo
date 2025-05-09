@@ -31,8 +31,6 @@ model User {
   orders        Order[]
   reviewsWritten Review[]
   addedSuppliers Supplier[]
-  userOneConnections Connection[] @relation("UserOneConnections")
-  userTwoConnections Connection[] @relation("UserTwoConnections")
   userOnePartnerships Partnership[] @relation("UserOnePartnerships")
   userTwoPartnerships Partnership[] @relation("UserTwoPartnerships")
   sentMessages  Message[]        @relation("SenderMessages")
@@ -729,27 +727,6 @@ model SupplierCategory {
   @@map("supplier_categories")
 }
 
-// User connections (replaces Match)
-model Connection {
-  id            String           @id @default(uuid()) @db.Uuid
-  userOneId     String           @db.Uuid
-  userOne       User             @relation("UserOneConnections", fields: [userOneId], references: [id], onDelete: Cascade)
-  userTwoId     String           @db.Uuid
-  userTwo       User             @relation("UserTwoConnections", fields: [userTwoId], references: [id], onDelete: Cascade)
-  status        ConnectionStatus @default(pending)
-  isStarredByUserOne Boolean      @default(false)
-  isStarredByUserTwo Boolean      @default(false)
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
-  deletedAt     DateTime?        // Soft delete
-
-  @@unique([userOneId, userTwoId])
-  @@index([userOneId])
-  @@index([userTwoId])
-  @@index([status])
-  @@map("connections")
-}
-
 // Conversations between users
 model Conversation {
   id            String           @id @default(uuid()) @db.Uuid
@@ -901,13 +878,6 @@ enum LeadTimeUnit {
   years
 }
 
-enum ConnectionStatus {
-  pending
-  accepted
-  declined
-  reconsidered
-}
-
 enum CampaignType {
   digital
   print
@@ -932,9 +902,6 @@ enum PartnershipTier {
 }
 
 enum NotificationType {
-  connection_request
-  connection_accepted
-  connection_declined
   order_update
   message
   partnership_update
