@@ -7,7 +7,6 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
 import { OrderCreateDTO } from 'src/common/DTO/order/order.Create.dto';
-import { OrderStatusUpdateDTO } from 'src/common/DTO/order/order.status.Update.dto';
 import { OrderBuyerUpdateDTO } from 'src/common/DTO/order/order.buyer.Update.dto';
 import { OrderQueryDTO } from 'src/common/DTO/order/order.query.dto';
 import {
@@ -29,10 +28,9 @@ type ProductWithSeller = CatalogProduct & {
 
 @Injectable()
 export class OrderService {
-  constructor(
-    private prisma: PrismaService,
-    private readonly logger: Logger,
-  ) {}
+  constructor(private prisma: PrismaService) {}
+
+  private readonly logger = new Logger(OrderService.name);
 
   private async getProductAndSeller(
     productId: string,
@@ -109,15 +107,8 @@ export class OrderService {
     } catch (error) {
       this.logger.error(
         `Error creating order for user ${buyerId}: ${error.message}`,
-        error.stack,
       );
-      if (error instanceof Prisma.PrismaClientKnownRequestError) {
-        if (error.code === 'P2002') {
-          throw new BadRequestException(
-            `Order with the same product and user already exists.`,
-          );
-        }
-      }
+
       throw new BadRequestException('Could not create order.');
     }
   }
