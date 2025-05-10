@@ -18,7 +18,7 @@ export class RoleGuard implements CanActivate {
     );
 
     if (!requiredRoles) {
-      return true; // No roles required, allow access
+      return true; // no roles required, allow access
     }
 
     const request = context.switchToHttp().getRequest();
@@ -35,6 +35,6 @@ export class RoleGuard implements CanActivate {
       );
     }
 
-    return true; // Default to allowing access if all checks pass
+    return true; // default to allowing access if all checks pass
   }
 }

@@ -6,8 +6,8 @@ import { AuthModule } from './auth/auth.module';
 import { ProductModule } from './product/product.module';
 import { EmailModule } from './email/email.module';
 import { ConfigModule } from './config/config.module';
-import { PartnershipService } from './partnership/partnership.service';
 import { PartnershipModule } from './partnership/partnership.module';
+import { OrderModule } from './order/order.module';
 
 @Module({
   imports: [
@@ -17,6 +17,7 @@ import { PartnershipModule } from './partnership/partnership.module';
     EmailModule,
     ConfigModule,
     PartnershipModule,
+    OrderModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -1,12 +1,10 @@
-import { IsInt, IsNotEmpty, IsUUID, Min } from 'class-validator';
+import { IsInt, IsPositive, IsString } from 'class-validator';
 
 export class OrderCreateDTO {
-  @IsNotEmpty()
-  @IsUUID()
+  @IsString()
   productId: string;
 
-  @IsNotEmpty()
   @IsInt()
-  @Min(1)
+  @IsPositive()
   quantity: number;
 }

@@ -34,7 +34,7 @@ export class EmailService {
         console.log('Email service transporter created successfully.');
       } catch (error) {
         console.error('Failed to create email service transporter:', error);
-        this.transporter.transporter = null as any; // set to null to indicate that the transporter is not configured
+        this.transporter.transporter = null as any;
       }
     }
   }

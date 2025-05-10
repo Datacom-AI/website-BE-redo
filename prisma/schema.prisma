@@ -15,7 +15,7 @@ model User {
   password      String
   role          UserRole
   presenceStatus PresenceStatus   @default(offline)
-  accountStatus AccountStatus    @default(pending)
+  accountStatus AccountStatus
   lastLogin     DateTime?
   jobTitle      String?
   profileImage String?
@@ -33,6 +33,7 @@ model User {
   addedSuppliers Supplier[]
   userOnePartnerships Partnership[] @relation("UserOnePartnerships")
   userTwoPartnerships Partnership[] @relation("UserTwoPartnerships")
+  partnershipRequestsMade Partnership[] @relation("PartnershipRequests")
   sentMessages  Message[]        @relation("SenderMessages")
   conversationsOne Conversation[] @relation("UserOneConversations")
   conversationsTwo Conversation[] @relation("UserTwoConversations")
@@ -40,7 +41,6 @@ model User {
   isProfilePublic Boolean        @default(false)
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
-  deletedAt     DateTime?        // Soft delete
 
   @@index([email])
   @@index([role, accountStatus])
@@ -57,7 +57,6 @@ model Profile {
   retailerDetails RetailerDetails?
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
-  deletedAt     DateTime?        // Soft delete
 
   @@index([userId])
   @@index([role])
@@ -78,8 +77,7 @@ model ManufacturerDetails {
   showProductionCapacity Boolean @default(false)
   showCertifications Boolean @default(false)
   createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
-  deletedAt     DateTime?        
+  updatedAt     DateTime         @updatedAt   
 
   @@index([profileId])
   @@map("manufacturer_details")
@@ -102,8 +100,7 @@ model BrandDetails {
   averageEngagementRate Float?   @default(0)
   marketingCampaigns MarketingCampaign[]
   createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
-  deletedAt     DateTime?        
+  updatedAt     DateTime         @updatedAt  
 
   @@index([profileId])
   @@map("brand_details")
@@ -131,7 +128,6 @@ model RetailerDetails {
   retailerProducts RetailerProduct[]
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
-  deletedAt     DateTime?        // Soft delete
 
   @@index([profileId])
   @@map("retailer_details")
@@ -153,7 +149,6 @@ model MarketingCampaign {
   budgetAllocationJson Json?     @db.JsonB
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
-  deletedAt     DateTime?        // Soft delete
 
   @@index([brandDetailsId])
   @@map("marketing_campaigns")
@@ -174,7 +169,6 @@ model StoreLocation {
   isPrimary     Boolean          @default(false)
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
-  deletedAt     DateTime?        // Soft delete
 
   @@index([retailerDetailsId])
   @@map("store_locations")
@@ -187,7 +181,6 @@ model RetailerProductCategory {
   retailerProducts RetailerProduct[]
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
-  deletedAt     DateTime?        // Soft delete
 
   @@map("retailer_product_categories")
 }
@@ -210,7 +203,6 @@ model RetailerProduct {
   price         Float?           @default(0)
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
-  deletedAt     DateTime?        // Soft delete
 
   @@unique([retailerDetailsId, sku])
   @@index([retailerDetailsId])
@@ -227,23 +219,27 @@ model Partnership {
   userTwoId     String           @db.Uuid
   userTwo       User             @relation("UserTwoPartnerships", fields: [userTwoId], references: [id], onDelete: Cascade)
   type          PartnershipType
-  partnershipType String?         // Custom type description
+  status        PartnershipStatus @default(pending)
+  partnershipType String? // custome type desc
   agreementDetails String?
   creditTerms   String?
   minimumOrderRequirements String?
-  isActive      Boolean          @default(true)
+  isActive      Boolean          @default(false)
   notes         String?
   partnershipTier PartnershipTier?
   startDate     DateTime?
   endDate       DateTime?
+  requestedById    String        @db.Uuid
+  requestedBy   User             @relation("PartnershipRequests", fields: [requestedById ], references: [id], onDelete: Restrict)
+
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
-  deletedAt     DateTime?        // Soft delete
 
   @@unique([userOneId, userTwoId])
   @@index([userOneId])
   @@index([userTwoId])
   @@index([type])
+  @@index([status])
   @@map("partnerships")
 }
 
@@ -261,7 +257,6 @@ model Certification {
   certificationCompliance String[]
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
-  deletedAt     DateTime?        // Soft delete
 
   @@index([manufacturerDetailsId])
   @@index([expiryDate])
@@ -291,7 +286,6 @@ model CompanyInformation {
   tags          CompanyTag[]
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
-  deletedAt     DateTime?        // Soft delete
 
   @@index([userId])
   @@map("company_information")
@@ -305,7 +299,6 @@ model CompanyTag {
   companyInfo   CompanyInformation @relation(fields: [companyInfoId], references: [id], onDelete: Cascade)
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
-  deletedAt     DateTime?        // Soft delete
 
   @@unique([companyInfoId, name])
   @@index([companyInfoId])
@@ -323,7 +316,6 @@ model ManufacturingCapability {
   specialties   Specialty[]
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
-  deletedAt     DateTime?        // Soft delete
 
   @@index([manufacturerDetailsId])
   @@map("manufacturing_capabilities")
@@ -337,7 +329,6 @@ model MaterialHandled {
   manufacturingCapability ManufacturingCapability @relation(fields: [manufacturingCapabilityId], references: [id], onDelete: Cascade)
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
-  deletedAt     DateTime?        // Soft delete
 
   @@unique([manufacturingCapabilityId, name])
   @@index([manufacturingCapabilityId])
@@ -352,7 +343,6 @@ model Specialty {
   manufacturingCapability ManufacturingCapability @relation(fields: [manufacturingCapabilityId], references: [id], onDelete: Cascade)
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
-  deletedAt     DateTime?        // Soft delete
 
   @@unique([manufacturingCapabilityId, name])
   @@index([manufacturingCapabilityId])
@@ -370,7 +360,6 @@ model NotificationPreferences {
   marketingEmails Boolean        @default(true)
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
-  deletedAt     DateTime?        // Soft delete
 
   @@index([userId])
   @@map("notification_preferences")
@@ -391,7 +380,6 @@ model SecuritySettings {
   alertSuspiciousActivity Boolean @default(true)
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
-  deletedAt     DateTime?        // Soft delete
 
   @@index([userId])
   @@map("security_settings")
@@ -407,7 +395,6 @@ model BackupCode {
   usedAt        DateTime?
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
-  deletedAt     DateTime?        // Soft delete
 
   @@index([securitySettingsId])
   @@map("backup_codes")
@@ -423,7 +410,6 @@ model ApplicationPreferences {
   compactSidebarEnabled Boolean  @default(false)
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
-  deletedAt     DateTime?        // Soft delete
 
   @@index([userId])
   @@map("application_preferences")
@@ -446,7 +432,6 @@ model ProductionLine {
   energyConsumptionKwh Float?    @default(0)
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
-  deletedAt     DateTime?        // Soft delete
 
   @@index([manufacturerDetailsId])
   @@map("production_lines")
@@ -468,7 +453,6 @@ model InventoryItem {
   catalogProduct CatalogProduct? @relation(fields: [catalogProductId], references: [id])
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
-  deletedAt     DateTime?        // Soft delete
 
   @@unique([manufacturerDetailsId, itemSKU])
   @@index([manufacturerDetailsId])
@@ -504,7 +488,6 @@ model CatalogProduct {
   retailerProducts RetailerProduct[]
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
-  deletedAt     DateTime?        // Soft delete
 
   @@unique([manufacturerDetailsId, productSKU])
   @@index([manufacturerDetailsId])
@@ -520,7 +503,6 @@ model ProductCategory {
   products      CatalogProduct[]
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
-  deletedAt     DateTime?        // Soft delete
 
   @@map("product_categories")
 }
@@ -534,7 +516,6 @@ model ProductFeature {
   description   String?
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
-  deletedAt     DateTime?        // Soft delete
 
   @@unique([brandDetailsId, name])
   @@index([brandDetailsId])
@@ -550,7 +531,6 @@ model BrandCertification {
   description   String?
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
-  deletedAt     DateTime?        // Soft delete
 
   @@unique([brandDetailsId, name])
   @@index([brandDetailsId])
@@ -566,7 +546,6 @@ model SustainabilityClaim {
   description   String?
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
-  deletedAt     DateTime?        // Soft delete
 
   @@unique([brandDetailsId, name])
   @@index([brandDetailsId])
@@ -582,7 +561,6 @@ model TopSellingCategory {
   salesVolume   Float?           @default(0)
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
-  deletedAt     DateTime?        // Soft delete
 
   @@index([retailerDetailsId])
   @@map("top_selling_categories")
@@ -597,13 +575,11 @@ model CustomerDemographic {
   percentage    Float?           @default(0)
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
-  deletedAt     DateTime?        // Soft delete
 
   @@index([retailerDetailsId])
   @@map("customer_demographics")
 }
 
-// Purchase frequencies for retailers
 model PurchaseFrequency {
   id            String           @id @default(uuid()) @db.Uuid
   retailerDetailsId String        @db.Uuid
@@ -612,13 +588,11 @@ model PurchaseFrequency {
   percentage    Float?           @default(0)
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
-  deletedAt     DateTime?        // Soft delete
 
   @@index([retailerDetailsId])
   @@map("purchase_frequencies")
 }
 
-// Reviews for catalog products
 model Review {
   id            String           @id @default(uuid()) @db.Uuid
   userId        String           @db.Uuid
@@ -629,7 +603,6 @@ model Review {
   comment       String?
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
-  deletedAt     DateTime?        // Soft delete
 
   @@unique([userId, catalogProductId])
   @@index([userId])
@@ -646,10 +619,10 @@ model Order {
   product       CatalogProduct   @relation(fields: [productId], references: [id], onDelete: Restrict)
   quantity      Int              @default(0)
   totalPrice    Float            @default(0)
-  status        Status           @default(pending)
+  shippingNotes String?
+  status        OrderStatus           @default(pending)
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
-  deletedAt     DateTime?        // Soft delete
 
   @@index([userId])
   @@index([productId])
@@ -665,7 +638,6 @@ model SocialLink {
   url           String
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
-  deletedAt     DateTime?        // Soft delete
 
   @@unique([userId, platform])
   @@index([userId])
@@ -693,7 +665,6 @@ model Supplier {
   materials     SupplierMaterial[]
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
-  deletedAt     DateTime?        // Soft delete
 
   @@index([userId])
   @@index([supplierCategoryId])
@@ -708,7 +679,6 @@ model SupplierMaterial {
   supplier      Supplier         @relation(fields: [supplierId], references: [id], onDelete: Cascade)
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
-  deletedAt     DateTime?        // Soft delete
 
   @@unique([supplierId, name])
   @@index([supplierId])
@@ -722,7 +692,6 @@ model SupplierCategory {
   supplier      Supplier[]
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
-  deletedAt     DateTime?        // Soft delete
 
   @@map("supplier_categories")
 }
@@ -737,7 +706,6 @@ model Conversation {
   messages      Message[]
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
-  deletedAt     DateTime?        // Soft delete
 
   @@unique([userOneId, userTwoId])
   @@index([userOneId])
@@ -756,7 +724,6 @@ model Message {
   isRead        Boolean          @default(false)
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
-  deletedAt     DateTime?        // Soft delete
 
   @@index([conversationId])
   @@index([senderId])
@@ -770,13 +737,14 @@ model Notification {
   user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   type          NotificationType
   message       String
+  relatedId     String?          @db.Uuid
   isRead        Boolean          @default(false)
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
-  deletedAt     DateTime?        // Soft delete
 
   @@index([userId])
   @@index([type])
+  @@index([relatedId])
   @@map("notifications")
 }
 
@@ -791,7 +759,6 @@ model PasswordResetToken {
   usedAt        DateTime?
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
-  deletedAt     DateTime?        // Soft delete
 
   @@index([userId])
   @@index([token])
@@ -808,7 +775,6 @@ model Admin {
   permissions   String[]         // Added for role-based access
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
-  deletedAt     DateTime?        // Soft delete
 
   @@index([username])
   @@map("admins")
@@ -831,16 +797,26 @@ enum PresenceStatus {
 
 enum AccountStatus {
   active
+  emailVerified
+  pendingVerification
   inactive
   suspended
+}
+
+enum OrderStatus {
   pending
+  accepted
+  rejected
+  processing
+  shipped
+  completed
+  cancelled
 }
 
 enum Status {
-  pending
   active
-  completed
-  cancelled
+  inactive
+  pending
   archived
 }
 
@@ -890,6 +866,9 @@ enum CampaignType {
 }
 
 enum PartnershipType {
+  manufacturer_manufacturer
+  brand_brand
+  retailer_retailer
   retailer_brand
   manufacturer_brand
   manufacturer_retailer
@@ -901,8 +880,29 @@ enum PartnershipTier {
   strategic
 }
 
+enum PartnershipStatus {
+  pending
+  accepted
+  declined
+  cancelled
+  terminated
+}
+
 enum NotificationType {
   order_update
   message
+  // partnership notification
   partnership_update
+  partnership_terminated
+  partnership_request_received
+  partnership_request_accepted
+  partnership_request_declined
+  partnership_admin_deleted
+  // order notification
+  new_order_placed_for_seller
+  order_accepted_by_seller_for_buyer
+  order_rejected_by_seller_for_buyer
+  order_status_updated_by_seller_for_buyer
+  order_cancelled_by_buyer_for_seller
+  order_cancelled_by_seller_for_buyer
 }

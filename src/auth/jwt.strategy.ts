@@ -21,7 +21,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     if (payload.role === 'admin') {
       // admin validation
       const admin = await this.prisma.admin.findUnique({
-        where: { id: payload.id, deletedAt: null },
+        where: { id: payload.id },
         select: {
           id: true,
           username: true,

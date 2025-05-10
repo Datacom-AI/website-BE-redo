@@ -62,7 +62,7 @@ export class AuthService {
         password: hashedPassword,
         role: UserRole.manufacturer,
         presenceStatus: 'offline',
-        accountStatus: 'pending',
+        accountStatus: 'pendingVerification',
       },
     });
 
@@ -91,7 +91,7 @@ export class AuthService {
 
     const user = await this.prisma.user.findUnique({ where: { email } });
 
-    if (!user) {
+    if (!user || user.accountStatus !== 'pendingVerification') {
       throw new BadRequestException('Invalid user or already verified');
     }
 
@@ -117,18 +117,20 @@ export class AuthService {
       where: { id: user.id },
       data: {
         presenceStatus: 'online',
-        accountStatus: 'active',
+        accountStatus: 'emailVerified',
       },
     });
 
-    this.logger.log(`Email verified for user: ${email}`);
+    this.logger.log(
+      `Email verified for user: ${email}. Status set to emailVerified`,
+    );
 
     return updatedUser;
   }
 
   async resendVerificationService(email: string): Promise<void> {
     const user = await this.prisma.user.findUnique({ where: { email } });
-    if (!user || user.accountStatus !== 'pending') {
+    if (!user || user.accountStatus !== 'pendingVerification') {
       throw new BadRequestException('User not found or already verified');
     }
 
@@ -160,8 +162,10 @@ export class AuthService {
 
     const user = await this.prisma.user.findUnique({ where: { email } });
 
-    if (!user || user.accountStatus !== 'pending') {
-      throw new BadRequestException('User not found or already verified');
+    if (!user || user.accountStatus !== 'emailVerified') {
+      throw new BadRequestException(
+        'User not found or already verified or already has a role',
+      );
     }
 
     const updatedUser = await this.prisma.user.update({
@@ -187,7 +191,7 @@ export class AuthService {
       where: { email },
     });
 
-    if (!user || user.accountStatus !== 'active') {
+    if (!user) {
       throw new BadRequestException('Invalid credentials or inactive account');
     }
 
@@ -195,6 +199,22 @@ export class AuthService {
 
     if (!isPasswordValid) {
       throw new BadRequestException('Invalid email or password');
+    }
+
+    if (user.accountStatus === 'pendingVerification') {
+      throw new BadRequestException(
+        'Please verify your email address to login',
+      );
+    } else if (user.accountStatus === 'emailVerified') {
+      this.logger.log(
+        `User ${user.email} is trying to login but has not chosen a role yet`,
+      );
+    } else if (user.accountStatus === 'active') {
+      this.logger.log(`User ${user.email} logged in successfully`);
+    } else {
+      throw new BadRequestException(
+        `Account status ${user.accountStatus} does not permit login. Please contact support.`,
+      );
     }
 
     await this.prisma.user.update({
@@ -267,7 +287,7 @@ export class AuthService {
     }
 
     const admin = await this.prisma.admin.findUnique({
-      where: { username, deletedAt: null },
+      where: { username },
     });
 
     if (!admin) {

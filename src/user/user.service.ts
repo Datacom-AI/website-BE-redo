@@ -122,10 +122,9 @@ export class UserService {
     };
   }
 
-  // CRUD Methods
   async findAllService(): Promise<UserReadPrivateDTO[]> {
     const users = await this.prisma.user.findMany({
-      where: { deletedAt: null },
+      where: {},
       include: {
         companyInfo: true,
         notificationPreferences: true,
@@ -155,7 +154,7 @@ export class UserService {
     }
     try {
       const user = await this.prisma.user.findUnique({
-        where: { id, deletedAt: null },
+        where: { id },
         include: {
           companyInfo: true,
           notificationPreferences: true,
@@ -193,7 +192,7 @@ export class UserService {
     }
     try {
       const user = await this.prisma.user.findUnique({
-        where: { email, deletedAt: null },
+        where: { email },
         include: {
           companyInfo: true,
           notificationPreferences: true,
@@ -240,7 +239,7 @@ export class UserService {
           name: userData.name,
           password: hashedPassword,
           role: userData.role,
-          accountStatus: 'pending',
+          accountStatus: 'pendingVerification',
           presenceStatus: 'offline',
           isProfilePublic: false,
         },
@@ -274,7 +273,7 @@ export class UserService {
 
   async deleteUserService(id: string): Promise<void> {
     const user = await this.prisma.user.findUnique({
-      where: { id, deletedAt: null },
+      where: { id },
     });
 
     if (!user) {
@@ -306,20 +305,12 @@ export class UserService {
       }
     }
 
-    // hard delete
     await this.prisma.user.delete({
       where: { id },
     });
     this.logger.log(`User with ID ${id} has been permanently deleted.`);
-
-    // soft delete
-    // await this.prisma.user.update({
-    //   where: { id },
-    //   data: { deletedAt: new Date() },
-    // });
   }
 
-  // Profile Management
   async getProfile(userId: string): Promise<UserReadPrivateDTO> {
     return await this.findOneService(userId);
   }
@@ -336,10 +327,9 @@ export class UserService {
       isProfilePublic: dto.isProfilePublic,
     };
 
-    // Handle socialLinks
     if (dto.socialLinks) {
       updateData.socialLinks = {
-        deleteMany: {}, // Clear existing links
+        deleteMany: {},
         create: dto.socialLinks.map((link) => ({
           platform: link.platform,
           url: link.url,
@@ -347,7 +337,6 @@ export class UserService {
       };
     }
 
-    // Handle companyInfo
     if (dto.companyInfo) {
       updateData.companyInfo = {
         upsert: {
@@ -357,7 +346,6 @@ export class UserService {
       };
     }
 
-    // Role-specific profile updates
     if (dto.manufacturerProfile && userRole !== 'manufacturer') {
       throw new ForbiddenException(
         'Only manufacturers can update manufacturer profile',
@@ -425,7 +413,7 @@ export class UserService {
 
     try {
       const user = await this.prisma.user.update({
-        where: { id: userId, deletedAt: null },
+        where: { id: userId },
         data: updateData,
         include: {
           companyInfo: true,
@@ -457,7 +445,6 @@ export class UserService {
         );
       }
 
-      // this.logger.error('Invalid data provided:', error);
       throw new BadRequestException('Invalid data provided');
     }
   }
@@ -467,7 +454,7 @@ export class UserService {
     dto: UserUpdateCredentialDTO,
   ): Promise<UserReadPrivateDTO> {
     const user = await this.prisma.user.findUnique({
-      where: { id: userId, deletedAt: null },
+      where: { id: userId },
     });
 
     if (!user) {
@@ -526,7 +513,7 @@ export class UserService {
     dto: PreferencesNotificationUpdateDTO,
   ): Promise<UserReadPrivateDTO> {
     const user = await this.prisma.user.findUnique({
-      where: { id: userId, deletedAt: null },
+      where: { id: userId },
     });
 
     if (!user) {
@@ -571,7 +558,7 @@ export class UserService {
     dto: SecuritySettingsUpdateDTO,
   ): Promise<UserReadPrivateDTO> {
     const user = await this.prisma.user.findUnique({
-      where: { id: userId, deletedAt: null },
+      where: { id: userId },
     });
 
     if (!user) {
@@ -601,7 +588,6 @@ export class UserService {
       },
     });
 
-    // generate new backup codes if requested
     if (dto.generateNewBackupCodes) {
       await this.prisma.backupCode.deleteMany({
         where: { securitySettingsId: securitySettings.id },
@@ -655,7 +641,7 @@ export class UserService {
     userId: string,
   ): Promise<UserReadPrivateDTO> {
     const user = await this.prisma.user.findUnique({
-      where: { id: userId, deletedAt: null },
+      where: { id: userId },
       include: { securitySettings: true },
     });
 
@@ -727,7 +713,7 @@ export class UserService {
     code: string,
   ): Promise<{ valid: boolean; message?: string }> {
     const user = await this.prisma.user.findUnique({
-      where: { id: userId, deletedAt: null },
+      where: { id: userId },
       include: {
         securitySettings: {
           include: { backupCodes: true },
@@ -761,7 +747,7 @@ export class UserService {
     dto: PreferencesApplicationUpdateDTO,
   ): Promise<UserReadPrivateDTO> {
     const user = await this.prisma.user.findUnique({
-      where: { id: userId, deletedAt: null },
+      where: { id: userId },
     });
     if (!user) {
       throw new NotFoundException('User not found');
@@ -805,7 +791,7 @@ export class UserService {
     files: Express.Multer.File[],
   ): Promise<UserReadPrivateDTO> {
     const user = await this.prisma.user.findUnique({
-      where: { id: userId, deletedAt: null },
+      where: { id: userId },
     });
 
     if (!user) {
