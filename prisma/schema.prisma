@@ -905,4 +905,5 @@ enum NotificationType {
   order_status_updated_by_seller_for_buyer
   order_cancelled_by_buyer_for_seller
   order_cancelled_by_seller_for_buyer
+  order_deleted_by_admin
 }

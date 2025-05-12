@@ -8,6 +8,7 @@ import { EmailModule } from './email/email.module';
 import { ConfigModule } from './config/config.module';
 import { PartnershipModule } from './partnership/partnership.module';
 import { OrderModule } from './order/order.module';
+import { ProductModule } from './product/product.module';
 
 @Module({
   imports: [

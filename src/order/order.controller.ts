@@ -12,6 +12,7 @@ import {
   Param,
   Query,
   ParseUUIDPipe,
+  BadRequestException,
 } from '@nestjs/common';
 import { OrderService } from './order.service';
 import { OrderCreateDTO } from 'src/common/DTO/order/order.Create.dto';
@@ -69,6 +70,12 @@ export class OrderController {
     @Param('id', ParseUUIDPipe) orderId: string,
     @Body() dto: OrderSellerResponseDTO,
   ): Promise<Order> {
+    // if (!dto.action || !['accept', 'reject'].includes(dto.action)) {
+    //   throw new BadRequestException(
+    //     "Invalid action. Must be 'accept' or 'reject'.",
+    //   );
+    // }
+
     return this.orderService.sellerRespondToOrder(
       req.user.id,
       orderId,

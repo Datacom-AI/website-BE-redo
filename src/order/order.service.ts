@@ -19,6 +19,7 @@ import {
   Profile,
   ManufacturerDetails,
 } from 'generated/prisma';
+import { stdout } from 'process';
 
 type ProductWithSeller = CatalogProduct & {
   manufacturerDetails: ManufacturerDetails & {
@@ -107,6 +108,7 @@ export class OrderService {
     } catch (error) {
       this.logger.error(
         `Error creating order for user ${buyerId}: ${error.message}`,
+        error.stack,
       );
 
       throw new BadRequestException('Could not create order.');
@@ -144,37 +146,50 @@ export class OrderService {
     const newStatus =
       action === 'accept' ? OrderStatus.accepted : OrderStatus.rejected;
 
-    if (action === 'reject') {
-      await this.prisma.catalogProduct.update({
-        where: { id: order.productId },
-        data: { stockLevel: { increment: order.quantity } },
+    try {
+      const updatedOrder = await this.prisma.$transaction(async (tx) => {
+        if (action === 'reject') {
+          await tx.catalogProduct.update({
+            where: { id: order.productId },
+            data: { stockLevel: { increment: order.quantity } },
+          });
+          this.logger.log(
+            `Stock replenished for product ${order.productId} due to rejection of order ${order.id}`,
+          );
+        }
+        const updated = await tx.order.update({
+          where: { id: orderId },
+          data: { status: newStatus },
+        });
+
+        const notificationType =
+          action === 'accept'
+            ? NotificationType.order_accepted_by_seller_for_buyer
+            : NotificationType.order_rejected_by_seller_for_buyer;
+
+        await tx.notification.create({
+          data: {
+            userId: order.userId,
+            type: notificationType,
+            message: `Your order (#${order.id.substring(0, 8)}) for ${order.product.name} has been ${action}ed by the seller.`,
+            relatedId: order.id,
+          },
+        });
+
+        return updated;
       });
       this.logger.log(
-        `Stock replenished for product ${order.productId} due to rejection of order ${order.id}`,
+        `Order ${order.id} ${action}ed by seller ${sellerId}. Status updated to ${newStatus}.`,
       );
+
+      return updatedOrder;
+    } catch (error) {
+      this.logger.error(
+        `Error updating order ${orderId} status to ${newStatus} by seller ${sellerId}: ${error.message}`,
+        error.stack,
+      );
+      throw new BadRequestException('Could not update order status.');
     }
-
-    const updatedOrder = await this.prisma.order.update({
-      where: { id: orderId },
-      data: { status: newStatus },
-    });
-
-    const notificationType =
-      action === 'accept'
-        ? NotificationType.order_accepted_by_seller_for_buyer
-        : NotificationType.order_rejected_by_seller_for_buyer;
-    await this.prisma.notification.create({
-      data: {
-        userId: order.userId,
-        type: notificationType,
-        message: `Your order (#${order.id.substring(0, 8)}) for ${order.product.name} has been ${action}ed by the seller.`,
-        relatedId: order.id,
-      },
-    });
-    this.logger.log(
-      `Order ${order.id} ${action}ed by seller ${sellerId}. Status set to ${newStatus}.`,
-    );
-    return updatedOrder;
   }
 
   async updateOrderStatusBySeller(
@@ -229,43 +244,58 @@ export class OrderService {
       );
     }
 
-    if (newStatus === OrderStatus.cancelled) {
-      if (
-        order.status === OrderStatus.accepted ||
-        order.status === OrderStatus.processing ||
-        order.status === OrderStatus.pending
-      ) {
-        await this.prisma.catalogProduct.update({
-          where: { id: order.productId },
-          data: { stockLevel: { increment: order.quantity } },
+    try {
+      const updatedOrder = await this.prisma.$transaction(async (tx) => {
+        if (newStatus === OrderStatus.cancelled) {
+          if (
+            order.status === OrderStatus.accepted ||
+            order.status === OrderStatus.processing ||
+            order.status === OrderStatus.shipped
+          ) {
+            await tx.catalogProduct.update({
+              where: { id: order.productId },
+              data: { stockLevel: { increment: order.quantity } },
+            });
+            this.logger.log(
+              `Stock replenished for product ${order.productId} due to seller cancellation of order ${order.id}`,
+            );
+          }
+        }
+        const updated = await tx.order.update({
+          where: { id: orderId },
+          data: { status: newStatus },
         });
-        this.logger.log(
-          `Stock replenished for product ${order.productId} due to seller cancellation of order ${order.id}`,
-        );
-      }
+
+        const notificationType =
+          newStatus === OrderStatus.cancelled
+            ? NotificationType.order_cancelled_by_seller_for_buyer
+            : NotificationType.order_status_updated_by_seller_for_buyer;
+
+        await tx.notification.create({
+          data: {
+            userId: order.userId,
+            type: notificationType,
+            message: `The status of your order (#${order.id.substring(0, 8)}) for ${order.product.name} has been updated to ${newStatus}.`,
+            relatedId: order.id,
+          },
+        });
+
+        return updated;
+      });
+
+      this.logger.log(
+        `Order ${order.id} status updated to ${newStatus} by seller ${sellerId}.`,
+      );
+
+      return updatedOrder;
+    } catch (error) {
+      this.logger.error(
+        `Error updating stock level for product ${order.productId} during order cancellation: ${error.message}`,
+        error.stack,
+      );
+
+      throw new BadRequestException('Could not update order status.');
     }
-
-    const updatedOrder = await this.prisma.order.update({
-      where: { id: orderId },
-      data: { status: newStatus },
-    });
-
-    const notificationType =
-      newStatus === OrderStatus.cancelled
-        ? NotificationType.order_cancelled_by_seller_for_buyer
-        : NotificationType.order_status_updated_by_seller_for_buyer;
-    await this.prisma.notification.create({
-      data: {
-        userId: order.userId,
-        type: notificationType,
-        message: `The status of your order (#${order.id.substring(0, 8)}) for ${order.product.name} has been updated to ${newStatus}.`,
-        relatedId: order.id,
-      },
-    });
-    this.logger.log(
-      `Order ${order.id} status updated to ${newStatus} by seller ${sellerId}.`,
-    );
-    return updatedOrder;
   }
 
   async updateOrderByBuyer(
@@ -275,6 +305,7 @@ export class OrderService {
   ): Promise<Order> {
     const order = await this.prisma.order.findUnique({
       where: { id: orderId },
+      include: { product: true },
     });
     if (!order)
       throw new NotFoundException(`Order with ID ${orderId} not found.`);
@@ -292,15 +323,57 @@ export class OrderService {
       );
     }
 
-    const updatedOrder = await this.prisma.order.update({
-      where: { id: orderId },
-      data: { shippingNotes: dto.shippingNotes },
-    });
+    let stockUpdate = {};
+    let totalPriceUpdate = {};
+    if (dto.quantity && dto.quantity !== order.quantity) {
+      const stockDifference = dto.quantity - order.quantity;
 
-    this.logger.log(
-      `Order ${order.id} shipping notes updated by buyer ${buyerId}.`,
-    );
-    return updatedOrder;
+      if (stockDifference > order.product.stockLevel) {
+        throw new BadRequestException(
+          `Insufficient stock for product ${order.product.name}. Available: ${order.product.stockLevel}, Requested: ${dto.quantity}`,
+        );
+      }
+
+      if (dto.quantity < (order.product.minimumOrderQuantity || 1)) {
+        throw new BadRequestException(
+          `Quantity below minimum order requirement: ${order.product.minimumOrderQuantity || 1}`,
+        );
+      }
+
+      stockUpdate = { stockLevel: { decrement: stockDifference } };
+      totalPriceUpdate = {
+        totalPrice: order.product.pricePerUnit * dto.quantity,
+      };
+    }
+
+    try {
+      const updatedOrder = await this.prisma.$transaction(async (tx) => {
+        if (dto.quantity && dto.quantity !== order.quantity) {
+          await tx.catalogProduct.update({
+            where: { id: order.productId },
+            data: stockUpdate,
+          });
+        }
+
+        return tx.order.update({
+          where: { id: orderId },
+          data: {
+            shippingNotes: dto.shippingNotes,
+            quantity: dto.quantity,
+            ...totalPriceUpdate,
+          },
+        });
+      });
+
+      this.logger.log(`Order ${order.id} updated by buyer ${buyerId}`);
+      return updatedOrder;
+    } catch (error) {
+      this.logger.error(
+        `Error updating order ${orderId} by buyer ${buyerId}: ${error.message}`,
+        error.stack,
+      );
+      throw new BadRequestException('Could not update order.');
+    }
   }
 
   async getOrderByIdForUser(
@@ -466,6 +539,7 @@ export class OrderService {
         },
       },
     });
+
     if (!order) {
       throw new NotFoundException(`Order with ID ${orderId} not found.`);
     }
@@ -475,40 +549,50 @@ export class OrderService {
       OrderStatus.completed,
       OrderStatus.rejected,
     ];
-
-    if (!terminalOrderStatuses.includes(order.status)) {
-      await this.prisma.catalogProduct.update({
-        where: { id: order.productId },
-        data: { stockLevel: { increment: order.quantity } },
-      });
-      this.logger.log(
-        `Stock replenished for product ${order.productId} due to admin deletion of order ${order.id}`,
-      );
-    }
-
     const sellerId = order.product.manufacturerDetails?.profile?.userId;
 
-    await this.prisma.notification.create({
-      data: {
-        userId: order.userId,
-        type: NotificationType.order_update,
-        message: `Your order (#${orderId.substring(0, 8)}) has been deleted by an administrator.`,
-        relatedId: orderId,
-      },
-    });
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        if (!terminalOrderStatuses.includes(order.status)) {
+          await tx.catalogProduct.update({
+            where: { id: order.productId },
+            data: { stockLevel: { increment: order.quantity } },
+          });
+          this.logger.log(
+            `Stock replenished for product ${order.productId} due to admin deletion of order ${order.id}`,
+          );
+        }
 
-    if (sellerId && sellerId !== order.userId) {
-      await this.prisma.notification.create({
-        data: {
-          userId: sellerId,
-          type: NotificationType.order_update,
-          message: `Order (#${orderId.substring(0, 8)}) involving your product has been deleted by an administrator.`,
-          relatedId: orderId,
-        },
+        await tx.notification.create({
+          data: {
+            userId: sellerId,
+            type: NotificationType.order_deleted_by_admin,
+            message: `Order (#${order.id.substring(0, 8)}) involving your product has been deleted by an administrator.`,
+            relatedId: orderId,
+          },
+        });
+
+        if (sellerId && sellerId !== order.userId) {
+          await tx.notification.create({
+            data: {
+              userId: sellerId,
+              type: NotificationType.order_deleted_by_admin,
+              message: `Order (#${order.id.substring(0, 8)}) involving your product has been deleted by an administrator.`,
+              relatedId: orderId,
+            },
+          });
+        }
+
+        await tx.order.delete({ where: { id: orderId } });
       });
-    }
 
-    await this.prisma.order.delete({ where: { id: orderId } });
-    this.logger.log(`Order ${orderId} hard deleted by admin.`);
+      this.logger.log(`Order ${orderId} hard deleted by admin.`);
+    } catch (error) {
+      this.logger.error(
+        `Error hard deleting order ${orderId}: ${error.message}`,
+        error.stack,
+      );
+      throw new BadRequestException('Could not hard delete order.');
+    }
   }
 }
