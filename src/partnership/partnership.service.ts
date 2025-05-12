@@ -6,6 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
+  Admin,
   Partnership,
   PartnershipStatus,
   PartnershipType,
@@ -36,38 +37,49 @@ export class PartnershipService {
     return user;
   }
 
-  private validatePartnershipType(
+  private async getAdmin(adminId: string): Promise<Admin> {
+    const admin = await this.prisma.admin.findFirst({
+      where: { id: adminId },
+    });
+
+    if (!admin) {
+      throw new NotFoundException(`Admin with ID ${adminId} not found`);
+    }
+
+    return admin;
+  }
+
+  private determinePartnershipType(
     userRole: UserRole,
     partnerRole: UserRole,
-    type: PartnershipType,
-  ): boolean {
-    const validateCombinations: Record<
-      PartnershipType,
-      [UserRole, UserRole][]
-    > = {
-      retailer_brand: [
-        [UserRole.retailer, UserRole.brand],
-        [UserRole.brand, UserRole.retailer],
-      ],
-      manufacturer_brand: [
-        [UserRole.manufacturer, UserRole.brand],
-        [UserRole.brand, UserRole.manufacturer],
-      ],
-      manufacturer_retailer: [
-        [UserRole.manufacturer, UserRole.retailer],
-        [UserRole.retailer, UserRole.manufacturer],
-      ],
-      manufacturer_manufacturer: [
-        [UserRole.manufacturer, UserRole.manufacturer],
-      ],
-      retailer_retailer: [[UserRole.retailer, UserRole.retailer]],
-      brand_brand: [[UserRole.brand, UserRole.brand]],
-    };
+  ): PartnershipType {
+    const roles = [userRole, partnerRole].sort(); // sort for consistent key generation
 
-    return validateCombinations[type].some(
-      ([role1, role2]) =>
-        (userRole === role1 && partnerRole === role2) ||
-        (userRole === role2 && partnerRole === role1),
+    if (roles[0] === UserRole.brand && roles[1] === UserRole.retailer) {
+      return PartnershipType.retailer_brand;
+    }
+    if (roles[0] === UserRole.brand && roles[1] === UserRole.manufacturer) {
+      return PartnershipType.manufacturer_brand;
+    }
+    if (roles[0] === UserRole.manufacturer && roles[1] === UserRole.retailer) {
+      return PartnershipType.manufacturer_retailer;
+    }
+
+    if (
+      roles[0] === UserRole.manufacturer &&
+      roles[1] === UserRole.manufacturer
+    ) {
+      return PartnershipType.manufacturer_manufacturer;
+    }
+    if (roles[0] === UserRole.retailer && roles[1] === UserRole.retailer) {
+      return PartnershipType.retailer_retailer;
+    }
+    if (roles[0] === UserRole.brand && roles[1] === UserRole.brand) {
+      return PartnershipType.brand_brand;
+    }
+
+    throw new BadRequestException(
+      `Invalid or unsupported role combination for partnership: ${userRole} and ${partnerRole}`,
     );
   }
 
@@ -83,17 +95,10 @@ export class PartnershipService {
     }
 
     // validate partnership type based on user roles
-    const validPartnership = this.validatePartnershipType(
+    const determinedPartnershipType = this.determinePartnershipType(
       requester.role,
       partner.role,
-      dto.type,
     );
-
-    if (!validPartnership) {
-      throw new BadRequestException(
-        `Invalid partnership type ${dto.type} for roles ${requester.role} and ${partner.role}`,
-      );
-    }
 
     const existingPartnership = await this.prisma.partnership.findFirst({
       where: {
@@ -125,7 +130,7 @@ export class PartnershipService {
           userOneId: requesterId,
           userTwoId: dto.userTwoId,
           requestedById: requesterId,
-          type: dto.type,
+          type: determinedPartnershipType,
           status: PartnershipStatus.pending,
           isActive: false,
           partnershipType: dto.partnershipType,
@@ -234,6 +239,12 @@ export class PartnershipService {
       },
     });
 
+    if (action === 'decline') {
+      await this.prisma.partnership.deleteMany({
+        where: { id: partnershipId },
+      });
+    }
+
     return updatedPartnership;
   }
 
@@ -269,6 +280,12 @@ export class PartnershipService {
       },
     });
 
+    if (updatedPartnership.status === PartnershipStatus.cancelled) {
+      await this.prisma.partnership.deleteMany({
+        where: { id: partnershipId },
+      });
+    }
+
     return updatedPartnership;
   }
 
@@ -292,21 +309,10 @@ export class PartnershipService {
       );
     }
 
-    // if updating type, validate the roles
-    if (dto.type && dto.type !== partnership.type) {
-      const userOneRole = partnership.userOne.role;
-      const userTwoRole = partnership.userTwo.role;
-      const validPartnershipType = this.validatePartnershipType(
-        userOneRole,
-        userTwoRole,
-        dto.type,
+    if (partnership.status !== 'accepted') {
+      throw new BadRequestException(
+        'Only active (accepted) partnerships can be updated.',
       );
-
-      if (!validPartnershipType) {
-        throw new BadRequestException(
-          `Invalid partnership type ${dto.type} for roles ${userOneRole} and ${userTwoRole}`,
-        );
-      }
     }
 
     try {
@@ -437,6 +443,12 @@ export class PartnershipService {
         },
       });
 
+      if (terminatedPartnership.status === PartnershipStatus.terminated) {
+        await this.prisma.partnership.deleteMany({
+          where: { id: partnershipId },
+        });
+      }
+
       const currentUser = await this.getUser(userId);
       const otherUserId =
         partnership.userOneId === userId
@@ -464,10 +476,10 @@ export class PartnershipService {
     adminUserId: string,
     partnershipId: string,
   ): Promise<void> {
-    const adminUser = await this.getUser(adminUserId);
+    const adminUser = await this.getAdmin(adminUserId);
 
     this.logger.log(
-      `Admin user ${adminUser.name} is attempting to delete partnership ${partnershipId}`,
+      `Admin user ${adminUser.username} is attempting to delete partnership ${partnershipId}`,
     );
 
     const partnership = await this.prisma.partnership.findUnique({
@@ -490,10 +502,10 @@ export class PartnershipService {
       });
 
       this.logger.log(
-        `Partnership ${partnershipId} deleted successfully by admin ${adminUser.name}`,
+        `Partnership ${partnershipId} deleted successfully by admin ${adminUser.username}`,
       );
 
-      const notificationMessage = `A partnership you were part of (ID: ${partnershipId}) has been deleted by admin ${adminUser.name}.`;
+      const notificationMessage = `A partnership you were part of (ID: ${partnershipId}) has been deleted by admin ${adminUser.username}.`;
 
       if (partnership.userOneId) {
         await this.prisma.notification.create({
@@ -518,7 +530,7 @@ export class PartnershipService {
       }
     } catch (error) {
       this.logger.error(
-        `Error deleting partnership ID: ${partnershipId} by admin ${adminUser.name}`,
+        `Error deleting partnership ID: ${partnershipId} by admin ${adminUser.username}`,
         error,
       );
       throw new BadRequestException('Error deleting partnership');

@@ -3,27 +3,36 @@ import {
   NotFoundException,
   ConflictException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
-import { ProductCategory, Prisma } from 'generated/prisma';
+import { ProductCategory, Prisma, UserRole } from 'generated/prisma';
 import { ProductCategoryCreateDTO } from 'src/common/DTO/product/productCategory/productCategory.Create.dto';
 import { ProductCategoryUpdateDTO } from 'src/common/DTO/product/productCategory/productCategory.Update.dto';
+
+interface AuthenticatedUser {
+  id: string;
+  role: UserRole;
+}
 
 @Injectable()
 export class ProductCategoryService {
   constructor(private prisma: PrismaService) {}
 
-  async create(dto: ProductCategoryCreateDTO): Promise<ProductCategory> {
+  async createProductCategory(
+    dto: ProductCategoryCreateDTO,
+    userId: string,
+  ): Promise<ProductCategory> {
     try {
       return await this.prisma.productCategory.create({
         data: {
           name: dto.name,
+          createdById: userId,
         },
       });
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === 'P2002') {
-          // Unique constraint violation
           throw new ConflictException(
             `Product category with name '${dto.name}' already exists.`,
           );
@@ -33,16 +42,17 @@ export class ProductCategoryService {
     }
   }
 
-  async findAll(): Promise<ProductCategory[]> {
+  async findAllProductCategory(): Promise<ProductCategory[]> {
     return this.prisma.productCategory.findMany({
       orderBy: { name: 'asc' },
     });
   }
 
-  async findOne(id: string): Promise<ProductCategory> {
+  async findOneProductCategory(id: string): Promise<ProductCategory> {
     const category = await this.prisma.productCategory.findUnique({
       where: { id },
     });
+
     if (!category) {
       throw new NotFoundException(
         `Product category with ID '${id}' not found.`,
@@ -52,11 +62,28 @@ export class ProductCategoryService {
     return category;
   }
 
-  async update(
+  async updateProductCategory(
     id: string,
     dto: ProductCategoryUpdateDTO,
+    user: AuthenticatedUser,
   ): Promise<ProductCategory> {
-    await this.findOne(id); // Ensure category exists
+    const category = await this.findOneProductCategory(id);
+
+    if (!category) {
+      throw new NotFoundException(
+        `Product category with ID '${id}' not found.`,
+      );
+    }
+
+    if (
+      user.role === UserRole.manufacturer &&
+      category.createdById !== user.id
+    ) {
+      throw new ForbiddenException(
+        'You do not have permission to update this product category.',
+      );
+    }
+
     try {
       return await this.prisma.productCategory.update({
         where: { id },
@@ -76,8 +103,26 @@ export class ProductCategoryService {
     }
   }
 
-  async remove(id: string): Promise<ProductCategory> {
-    const category = await this.findOne(id); // Ensure category exists
+  async removeProductCategory(
+    id: string,
+    user: AuthenticatedUser,
+  ): Promise<ProductCategory> {
+    const category = await this.findOneProductCategory(id);
+
+    if (!category) {
+      throw new NotFoundException(
+        `Product category with ID '${id}' not found.`,
+      );
+    }
+
+    if (
+      user.role === UserRole.manufacturer &&
+      category.createdById !== user.id
+    ) {
+      throw new ForbiddenException(
+        `You do not have permission to delete this product category.`,
+      );
+    }
 
     const productsCount = await this.prisma.catalogProduct.count({
       where: { productCategoryId: id },

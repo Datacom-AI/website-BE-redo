@@ -16,7 +16,14 @@ import { UserUpdateCredentialDTO } from 'src/common/DTO/user/user.credential.dto
 import { PreferencesNotificationUpdateDTO } from 'src/common/DTO/preferences/preferences.notification.Update.dto';
 import { SecuritySettingsUpdateDTO } from 'src/common/DTO/securitySettings/securitySettings.Update.dto';
 import { PreferencesApplicationUpdateDTO } from 'src/common/DTO/preferences/preferences.application.Update.dto';
-import { User, UserRole } from 'generated/prisma';
+import {
+  BrandDetails,
+  ManufacturerDetails,
+  Profile,
+  RetailerDetails,
+  User,
+  UserRole,
+} from 'generated/prisma';
 import {
   createImageName,
   saveImage,
@@ -108,6 +115,7 @@ export class UserService {
         : undefined,
       applicationPreferences: user.applicationPreferences,
       socialLinks: user.socialLinks,
+      isProfilePublic: user.isProfilePublic,
       manufacturerProfile:
         user.role === 'manufacturer'
           ? user.profile?.manufacturerDetails
@@ -116,7 +124,6 @@ export class UserService {
         user.role === 'brand' ? user.profile?.brandDetails : undefined,
       retailerProfile:
         user.role === 'retailer' ? user.profile?.retailerDetails : undefined,
-      isProfilePublic: user.isProfilePublic,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     };
@@ -133,11 +140,7 @@ export class UserService {
         socialLinks: true,
         profile: {
           include: {
-            manufacturerDetails: {
-              include: {
-                manufacturingCapability: true,
-              },
-            },
+            manufacturerDetails: true,
             brandDetails: true,
             retailerDetails: true,
           },
@@ -152,6 +155,7 @@ export class UserService {
     if (!id) {
       throw new BadRequestException('User ID is required');
     }
+
     try {
       const user = await this.prisma.user.findUnique({
         where: { id },
@@ -229,10 +233,23 @@ export class UserService {
     name: string;
     password: string;
     role: UserRole;
-  }): Promise<UserReadPrivateDTO> {
+  }): Promise<User> {
     try {
       const salt = await bcryptjs.genSalt(10);
       const hashedPassword = await bcryptjs.hash(userData.password, salt);
+
+      const profileCreateNestedInput: any = {
+        role: userData.role,
+      };
+
+      if (userData.role === UserRole.manufacturer) {
+        profileCreateNestedInput.manufacturerDetails = { create: {} };
+      } else if (userData.role === UserRole.brand) {
+        profileCreateNestedInput.brandDetails = { create: {} };
+      } else if (userData.role === UserRole.retailer) {
+        profileCreateNestedInput.retailerDetails = { create: {} };
+      }
+
       const user = await this.prisma.user.create({
         data: {
           email: userData.email,
@@ -243,32 +260,123 @@ export class UserService {
           presenceStatus: 'offline',
           isProfilePublic: false,
         },
+      });
+
+      await this.createProfileService(user.id, userData.role);
+      const userDataReturn = await this.prisma.user.findUnique({
+        where: { id: user.id },
         include: {
-          companyInfo: true,
-          notificationPreferences: true,
-          securitySettings: true,
-          applicationPreferences: true,
-          socialLinks: true,
           profile: {
             include: {
-              manufacturerDetails: {
-                include: {
-                  manufacturingCapability: true,
-                },
-              },
+              manufacturerDetails: true,
               brandDetails: true,
               retailerDetails: true,
             },
           },
         },
       });
-      return this.mapUserToDTO(user);
+
+      if (!userDataReturn || !userDataReturn.profile) {
+        throw new NotFoundException(
+          'User not found or profile created successfully',
+        );
+      }
+
+      return userDataReturn;
     } catch (error) {
       if (error.code === 'P2002') {
         throw new ConflictException('Email already exists');
       }
       throw new BadRequestException('Invalid data provided');
     }
+  }
+
+  async createProfileService(userId: string, role: UserRole): Promise<Profile> {
+    const user = await this.findOneService(userId);
+
+    const profile = await this.prisma.profile.create({
+      data: {
+        userId,
+        role: role,
+      },
+    });
+
+    if (role === 'manufacturer') {
+      await this.createManufacturerProfileService(profile.id);
+    } else if (role === 'brand') {
+      await this.createBrandProfileService(profile.id);
+    } else if (role === 'retailer') {
+      await this.createRetailerProfileService(profile.id);
+    }
+
+    return profile;
+  }
+
+  async createManufacturerProfileService(
+    profileId: string,
+  ): Promise<ManufacturerDetails> {
+    const profile = await this.prisma.profile.findUnique({
+      where: { id: profileId },
+    });
+
+    if (!profile) {
+      this.logger.error(
+        `Profile with ID ${profileId} not found when creating manufacturer details.`,
+      );
+      throw new NotFoundException(`Profile with ID ${profileId} not found.`);
+    }
+
+    const manufacturerDetails = await this.prisma.manufacturerDetails.create({
+      data: {
+        profileId,
+      },
+    });
+
+    return manufacturerDetails;
+  }
+
+  async createBrandProfileService(profileId: string): Promise<BrandDetails> {
+    const profile = await this.prisma.profile.findUnique({
+      where: { id: profileId },
+    });
+
+    if (!profile) {
+      this.logger.error(
+        `Profile with ID ${profileId} not found when creating brand details.`,
+      );
+      throw new NotFoundException(`Profile with ID ${profileId} not found.`);
+    }
+
+    const brandDetails = await this.prisma.brandDetails.create({
+      data: {
+        profileId,
+      },
+    });
+
+    return brandDetails;
+  }
+
+  async createRetailerProfileService(
+    profileId: string,
+  ): Promise<RetailerDetails> {
+    const profile = await this.prisma.profile.findUnique({
+      where: { id: profileId },
+    });
+
+    if (!profile) {
+      this.logger.error(
+        `Profile with ID ${profileId} not found when creating retailer details.`,
+      );
+      throw new NotFoundException(`Profile with ID ${profileId} not found.`);
+    }
+
+    const retailerDetails = await this.prisma.retailerDetails.create({
+      data: {
+        profileId,
+      },
+    });
+
+    return retailerDetails;
   }
 
   async deleteUserService(id: string): Promise<void> {

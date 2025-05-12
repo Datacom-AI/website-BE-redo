@@ -14,15 +14,10 @@ import { AuthRegisterDTO } from 'src/common/DTO/auth/auth.register.dto';
 import { AuthLoginDTO } from 'src/common/DTO/auth/auth.login.dto';
 import { AuthForgotPasswordDTO } from 'src/common/DTO/auth/auth.forgotPassword.dto';
 import { AuthResetPasswordDTO } from 'src/common/DTO/auth/auth.resetPassword.dto';
-import { UserReadPrivateDTO } from 'src/common/DTO/user/user.private.Read.dto';
 import { User } from 'generated/prisma';
-import { JwtAuthGuard } from 'src/common/guards/jwtAuth.guard';
 import { AuthVerifyEmailDTO } from 'src/common/DTO/auth/auth.verifyEmail.dto';
-import { AuthChooseRoleDTO } from 'src/common/DTO/auth/auth.chooseRole.dto';
 import { UserReadMinimalDTO } from 'src/common/DTO/others/userMinimal.Read.dto';
 import { ApiTags } from '@nestjs/swagger';
-import { RoleGuard } from 'src/common/guards/role.guard';
-import { Roles } from 'src/common/decorators/role.decorator';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -45,12 +40,6 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async verifyEmail(@Body() dto: AuthVerifyEmailDTO): Promise<User> {
     return await this.authService.verifyEmailService(dto);
-  }
-
-  @Post('choose-role')
-  @HttpCode(HttpStatus.OK)
-  async chooseRole(@Body() dto: AuthChooseRoleDTO): Promise<User> {
-    return await this.authService.chooseRoleService(dto);
   }
 
   @Post('login')
@@ -108,8 +97,6 @@ export class AuthController {
 
   @Post('admin/register')
   @HttpCode(HttpStatus.OK)
-  @UseGuards(JwtAuthGuard, RoleGuard)
-  @Roles('admin')
   async adminRegister(
     @Body()
     body: {
@@ -134,10 +121,4 @@ export class AuthController {
   }
 
   /* END OF ADMIN CONTROLLERS */
-
-  @UseGuards(JwtAuthGuard)
-  @Post('profile')
-  getProfile(@Request() req) {
-    return req.user;
-  }
 }

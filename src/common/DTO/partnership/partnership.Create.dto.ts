@@ -11,9 +11,6 @@ export class PartnershipCreateDTO {
   @IsString()
   userTwoId: string;
 
-  @IsEnum(PartnershipType)
-  type: PartnershipType;
-
   @IsOptional()
   @IsString()
   partnershipType?: string;

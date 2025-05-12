@@ -53,7 +53,7 @@ export class PartnershipController {
     );
   }
 
-  @Patch(':partnershipId/respond')
+  @Patch('respond/:partnershipId')
   @Roles(UserRole.manufacturer, UserRole.brand, UserRole.retailer)
   @ApiOperation({ summary: 'Respond to a partnership request' })
   @ApiResponse({
@@ -80,7 +80,7 @@ export class PartnershipController {
     );
   }
 
-  @Patch(':partnershipId/cancel')
+  @Patch('cancel/:partnershipId')
   @Roles(UserRole.manufacturer, UserRole.brand, UserRole.retailer)
   @ApiOperation({
     summary: 'Cancel a pending partnership request (by initiator)',
@@ -117,6 +117,10 @@ export class PartnershipController {
     @Param('partnershipId') partnershipId: string,
     @Body() dto: PartnershipUpdateDTO,
   ): Promise<Partnership> {
+    if (!partnershipId) {
+      throw new BadRequestException('Active partnership with ID not found.');
+    }
+
     return this.partnershipService.updatePartnershipService(
       req.user.id,
       partnershipId,
@@ -151,7 +155,7 @@ export class PartnershipController {
     );
   }
 
-  @Patch(':partnershipId/terminate')
+  @Patch('terminate/:partnershipId')
   @Roles(UserRole.manufacturer, UserRole.brand, UserRole.retailer)
   @ApiOperation({ summary: 'Terminate an active partnership' })
   @ApiResponse({
@@ -171,7 +175,7 @@ export class PartnershipController {
     );
   }
 
-  @Delete(':partnershipId/admin')
+  @Delete('admin/delete/:partnershipId')
   @Roles(UserRole.admin)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'ADMIN: Hard delete a partnership' })

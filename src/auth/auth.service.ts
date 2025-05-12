@@ -12,14 +12,14 @@ import { MailerService } from '@nestjs-modules/mailer';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from 'src/prisma.service';
 import { AuthRegisterDTO } from 'src/common/DTO/auth/auth.register.dto';
-import { User, UserRole } from 'generated/prisma';
+import { User } from 'generated/prisma';
 import { AuthVerifyEmailDTO } from 'src/common/DTO/auth/auth.verifyEmail.dto';
-import { AuthChooseRoleDTO } from 'src/common/DTO/auth/auth.chooseRole.dto';
 import { AuthLoginDTO } from 'src/common/DTO/auth/auth.login.dto';
 import { Payload } from 'src/common/interface';
 import { AuthForgotPasswordDTO } from 'src/common/DTO/auth/auth.forgotPassword.dto';
 import { AuthResetPasswordDTO } from 'src/common/DTO/auth/auth.resetPassword.dto';
 import { UserReadMinimalDTO } from 'src/common/DTO/others/userMinimal.Read.dto';
+import { UserService } from 'src/user/user.service';
 
 @Injectable()
 export class AuthService {
@@ -28,6 +28,7 @@ export class AuthService {
     private jwtService: JwtService,
     private mailerService: MailerService,
     private configService: ConfigService,
+    private userService: UserService,
   ) {}
 
   private readonly logger = new Logger(AuthService.name);
@@ -49,21 +50,15 @@ export class AuthService {
       );
     }
 
-    const salt = await bcryptjs.genSalt(10);
-    const hashedPassword = await bcryptjs.hash(password, salt);
     const verificationCode = Math.floor(
       100000 + Math.random() * 900000,
     ).toString();
 
-    const user = await this.prisma.user.create({
-      data: {
-        name,
-        email,
-        password: hashedPassword,
-        role: UserRole.manufacturer,
-        presenceStatus: 'offline',
-        accountStatus: 'pendingVerification',
-      },
+    const user = await this.userService.createUserService({
+      name,
+      email,
+      password,
+      role: dto.role,
     });
 
     await this.prisma.passwordResetToken.create({
@@ -117,13 +112,11 @@ export class AuthService {
       where: { id: user.id },
       data: {
         presenceStatus: 'online',
-        accountStatus: 'emailVerified',
+        accountStatus: 'active',
       },
     });
 
-    this.logger.log(
-      `Email verified for user: ${email}. Status set to emailVerified`,
-    );
+    this.logger.log(`Email verified for user: ${email}. Status set to active`);
 
     return updatedUser;
   }
@@ -153,33 +146,6 @@ export class AuthService {
     });
   }
 
-  async chooseRoleService(dto: AuthChooseRoleDTO): Promise<User> {
-    const { email, role } = dto;
-
-    if (!['manufacturer', 'brand', 'retailer'].includes(role)) {
-      throw new BadRequestException('Invalid role');
-    }
-
-    const user = await this.prisma.user.findUnique({ where: { email } });
-
-    if (!user || user.accountStatus !== 'emailVerified') {
-      throw new BadRequestException(
-        'User not found or already verified or already has a role',
-      );
-    }
-
-    const updatedUser = await this.prisma.user.update({
-      where: { email },
-      data: {
-        role: role as UserRole,
-        accountStatus: 'active',
-        presenceStatus: 'online',
-      },
-    });
-
-    return updatedUser;
-  }
-
   async loginService(dto: AuthLoginDTO): Promise<{
     accessToken: string;
     refreshToken: string;
@@ -204,10 +170,6 @@ export class AuthService {
     if (user.accountStatus === 'pendingVerification') {
       throw new BadRequestException(
         'Please verify your email address to login',
-      );
-    } else if (user.accountStatus === 'emailVerified') {
-      this.logger.log(
-        `User ${user.email} is trying to login but has not chosen a role yet`,
       );
     } else if (user.accountStatus === 'active') {
       this.logger.log(`User ${user.email} logged in successfully`);

@@ -9,10 +9,6 @@ import { PartnershipType, PartnershipTier } from 'generated/prisma';
 
 export class PartnershipUpdateDTO {
   @IsOptional()
-  @IsEnum(PartnershipType)
-  type?: PartnershipType;
-
-  @IsOptional()
   @IsString()
   partnershipType?: string;
 

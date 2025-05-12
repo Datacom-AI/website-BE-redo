@@ -55,7 +55,7 @@ export class OrderController {
     return this.orderService.createOrder(req.user.id, dto);
   }
 
-  @Patch(':id/seller-response')
+  @Patch('seller-response/:id')
   @Roles(UserRole.manufacturer)
   @ApiOperation({ summary: 'Seller accepts or rejects an order' })
   @ApiResponse({
@@ -83,7 +83,7 @@ export class OrderController {
     );
   }
 
-  @Patch(':id/status')
+  @Patch('status/:id')
   @Roles(UserRole.manufacturer)
   @ApiOperation({
     summary:
@@ -111,7 +111,7 @@ export class OrderController {
     );
   }
 
-  @Patch(':id/buyer-update')
+  @Patch('buyer-update/:id')
   @Roles(UserRole.manufacturer, UserRole.brand, UserRole.retailer)
   @ApiOperation({
     summary:
@@ -179,7 +179,7 @@ export class OrderController {
     );
   }
 
-  @Patch(':id/cancel-by-buyer')
+  @Patch('cancel-by-buyer/:id')
   @Roles(UserRole.manufacturer, UserRole.brand, UserRole.retailer)
   @ApiOperation({ summary: 'Buyer cancels a pending order' })
   @ApiResponse({
@@ -199,7 +199,7 @@ export class OrderController {
     return this.orderService.cancelOrderByBuyer(req.user.id, orderId);
   }
 
-  @Delete(':id/admin-hard-delete')
+  @Delete('admin-hard-delete/:id')
   @Roles(UserRole.admin)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'ADMIN: Hard delete an order' })

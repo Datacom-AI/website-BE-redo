@@ -11,6 +11,7 @@ import {
 import { UnitType, ProductType, LeadTimeUnit } from 'generated/prisma';
 import { Type } from 'class-transformer';
 
+// ...existing code...
 export class ProductCatalogUpdateDTO {
   @IsOptional()
   @IsString()
@@ -37,7 +38,7 @@ export class ProductCatalogUpdateDTO {
   @IsOptional()
   @Type(() => Number)
   @IsInt()
-  currentAvailableStock?: number;
+  stockLevel?: number; // Renamed from currentAvailableStock
 
   @IsOptional()
   @Type(() => Number)
@@ -62,12 +63,16 @@ export class ProductCatalogUpdateDTO {
 
   @IsOptional()
   @IsUrl()
-  imageUrl?: string;
+  image?: string; // Can be null to remove image
 
   @IsOptional()
   @Type(() => Boolean)
   @IsBoolean()
   isSustainableProduct?: boolean;
+
+  @IsOptional()
+  @IsString()
+  productSKU?: string;
 
   @IsOptional()
   @Type(() => Boolean)

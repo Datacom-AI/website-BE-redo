@@ -17,6 +17,10 @@ export class AuthRegisterDTO {
   @IsNotEmpty()
   email: string;
 
+  @IsEnum(UserRole)
+  @IsNotEmpty()
+  role: UserRole;
+
   @IsNotEmpty()
   @IsString()
   password: string;

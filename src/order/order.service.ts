@@ -19,7 +19,6 @@ import {
   Profile,
   ManufacturerDetails,
 } from 'generated/prisma';
-import { stdout } from 'process';
 
 type ProductWithSeller = CatalogProduct & {
   manufacturerDetails: ManufacturerDetails & {
@@ -55,6 +54,14 @@ export class OrderService {
   async createOrder(buyerId: string, dto: OrderCreateDTO): Promise<Order> {
     const product = await this.getProductAndSeller(dto.productId);
 
+    const sellerId = product.manufacturerDetails.profile.userId;
+
+    if (buyerId === sellerId) {
+      throw new BadRequestException(
+        'You cannot place an order for your own product.',
+      );
+    }
+
     if (product.stockLevel < dto.quantity) {
       throw new BadRequestException(
         `Insufficient stock for product ${product.name}. Available: ${product.stockLevel}, Requested: ${dto.quantity}`,
@@ -68,7 +75,6 @@ export class OrderService {
     }
 
     const totalPrice = product.pricePerUnit * dto.quantity;
-    const sellerId = product.manufacturerDetails.profile.userId;
 
     try {
       const order = await this.prisma.$transaction(async (tx) => {
@@ -537,6 +543,7 @@ export class OrderService {
         product: {
           include: { manufacturerDetails: { include: { profile: true } } },
         },
+        user: { select: { id: true, name: true, email: true } },
       },
     });
 

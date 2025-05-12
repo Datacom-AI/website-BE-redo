@@ -26,6 +26,7 @@ model User {
   companyInfo   CompanyInformation?
   notificationPreferences NotificationPreferences?
   securitySettings SecuritySettings?
+  createdProductCategories ProductCategory[] @relation("CreatedProductCategories")
   applicationPreferences ApplicationPreferences?
   profile       Profile?
   orders        Order[]
@@ -63,7 +64,6 @@ model Profile {
   @@map("profiles")
 }
 
-// Manufacturer-specific details
 model ManufacturerDetails {
   id            String           @id @default(uuid()) @db.Uuid
   profileId     String           @unique @db.Uuid
@@ -503,6 +503,9 @@ model ProductCategory {
   products      CatalogProduct[]
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
+
+  createdById   String?      @db.Uuid
+  createdBy     User?        @relation("CreatedProductCategories", fields: [createdById], references: [id])
 
   @@map("product_categories")
 }

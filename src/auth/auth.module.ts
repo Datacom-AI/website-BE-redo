@@ -9,6 +9,7 @@ import { MailerModule } from '@nestjs-modules/mailer';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handlebars.adapter';
 import { join } from 'path';
+import { UserModule } from 'src/user/user.module';
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { join } from 'path';
       inject: [ConfigService],
     }),
     ConfigModule,
+    UserModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy, PrismaService],
