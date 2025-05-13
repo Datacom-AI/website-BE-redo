@@ -11,7 +11,6 @@ import {
 import { UnitType, ProductType, LeadTimeUnit } from 'generated/prisma';
 import { Type } from 'class-transformer';
 
-// ...existing code...
 export class ProductCatalogUpdateDTO {
   @IsOptional()
   @IsString()

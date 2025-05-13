@@ -10,8 +10,6 @@ export class SupplierReadDTO {
 
   name: string;
 
-  supplierCategory: SupplierCategoryReadDTO;
-
   contactPerson: string;
   contactEmail: string;
   contactPhone: string;

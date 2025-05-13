@@ -174,24 +174,13 @@ model StoreLocation {
   @@map("store_locations")
 }
 
-// Product categories for retailer products
-model RetailerProductCategory {
-  id            String           @id @default(uuid()) @db.Uuid
-  name          String           @unique
-  retailerProducts RetailerProduct[]
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
-
-  @@map("retailer_product_categories")
-}
-
 // Products managed by retailers
 model RetailerProduct {
   id            String           @id @default(uuid()) @db.Uuid
   retailerDetailsId String        @db.Uuid
   retailerDetails RetailerDetails @relation(fields: [retailerDetailsId], references: [id], onDelete: Cascade)
   categoryId    String           @db.Uuid
-  category      RetailerProductCategory @relation(fields: [categoryId], references: [id])
+  category      ProductCategory @relation(fields: [categoryId], references: [id])
   catalogProductId String?        @db.Uuid // Link to manufacturer product
   catalogProduct CatalogProduct? @relation(fields: [catalogProductId], references: [id])
   sku           String
@@ -421,15 +410,17 @@ model ProductionLine {
   manufacturerDetailsId String    @db.Uuid
   manufacturerDetails ManufacturerDetails @relation(fields: [manufacturerDetailsId], references: [id], onDelete: Restrict)
   name          String
-  lineType      String?
-  capacityValue Float?           @default(0)
-  capacityUnit  String?
-  initialStatus String?
+  lineType      String
+  capacityValue Float           @default(0)
+  capacityUnit  String
+  initialStatus ProductionLineStatus
   operatorAssigned String
-  targetEfficiency Int?          @default(0)
-  nextMaintenanceDate DateTime?
-  operationalSince DateTime?
-  energyConsumptionKwh Float?    @default(0)
+  targetEfficiency Int          @default(0)
+  nextMaintenanceDate DateTime
+  operationalSince DateTime
+  energyConsumptionKwh Float     @default(0)
+  notes         String?
+  
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
 
@@ -501,6 +492,7 @@ model ProductCategory {
   id            String           @id @default(uuid()) @db.Uuid
   name          String           @unique
   products      CatalogProduct[]
+  retailerProducts RetailerProduct[]
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
 
@@ -653,8 +645,7 @@ model Supplier {
   name          String
   userId        String           @db.Uuid
   user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  supplierCategoryId String       @db.Uuid
-  supplierCategory SupplierCategory @relation(fields: [supplierCategoryId], references: [id])
+
   contactPerson String
   contactEmail  String
   contactPhone  String
@@ -669,8 +660,8 @@ model Supplier {
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
 
+  @@index([userId, name])
   @@index([userId])
-  @@index([supplierCategoryId])
   @@map("suppliers")
 }
 
@@ -688,16 +679,17 @@ model SupplierMaterial {
   @@map("supplier_materials")
 }
 
-// Supplier categories
-model SupplierCategory {
-  id            String           @id @default(uuid()) @db.Uuid
-  name          String           @unique
-  supplier      Supplier[]
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
+// // Supplier categories
+// model SupplierCategory {
+//   id            String           @id @default(uuid()) @db.Uuid
 
-  @@map("supplier_categories")
-}
+//   name          String           @unique
+
+//   createdAt     DateTime         @default(now())
+//   updatedAt     DateTime         @updatedAt
+
+//   @@map("supplier_categories")
+// }
 
 // Conversations between users
 model Conversation {
@@ -909,4 +901,11 @@ enum NotificationType {
   order_cancelled_by_buyer_for_seller
   order_cancelled_by_seller_for_buyer
   order_deleted_by_admin
+}
+
+enum ProductionLineStatus {
+  operational
+  idle
+  maintenance
+  offline
 }

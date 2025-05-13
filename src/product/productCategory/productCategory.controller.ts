@@ -36,7 +36,12 @@ export class ProductCategoryController {
 
   @Post()
   @UseGuards(JwtAuthGuard, RoleGuard)
-  @Roles(UserRole.admin, UserRole.manufacturer)
+  @Roles(
+    UserRole.admin,
+    UserRole.manufacturer,
+    UserRole.retailer,
+    UserRole.brand,
+  )
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a new product category' })
   @ApiResponse({
