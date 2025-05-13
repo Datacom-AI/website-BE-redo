@@ -1,4 +1,4 @@
-import { CampaignStatus, CampaignType } from 'generated/prisma';
+import { Status, CampaignType } from 'generated/prisma';
 
 export class MarketingCampaignReadDTO {
   id: string;
@@ -13,7 +13,7 @@ export class MarketingCampaignReadDTO {
   targetAudience?: string | null;
 
   campaignType?: CampaignType | null;
-  status: CampaignStatus;
+  status: Status;
 
   marketingBudget?: number | null;
 

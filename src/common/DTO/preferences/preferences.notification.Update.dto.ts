@@ -11,7 +11,7 @@ export class PreferencesNotificationUpdateDTO {
 
   @IsOptional()
   @IsBoolean()
-  matchNotifications?: boolean;
+  connectionNotifications?: boolean;
 
   @IsOptional()
   @IsBoolean()

@@ -1,4 +1,4 @@
-import { Status, UserRole } from 'generated/prisma';
+import { AccountStatus, PresenceStatus, UserRole } from 'generated/prisma';
 import {
   IsEmail,
   IsNotEmpty,
@@ -22,13 +22,17 @@ export class UserRawDTO {
 
   @IsOptional()
   @IsString()
-  companyName?: string;
+  companyName: string;
 
   @IsNotEmpty()
   @IsEnum(UserRole)
   role: UserRole;
 
+  @IsNotEmpty()
+  @IsEnum(PresenceStatus)
+  presenceStatus: PresenceStatus;
+
   @IsOptional()
-  @IsEnum(Status)
-  status?: Status;
+  @IsEnum(AccountStatus)
+  accountStatus: AccountStatus;
 }

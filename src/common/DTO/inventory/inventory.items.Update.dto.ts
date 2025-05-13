@@ -1,7 +1,7 @@
-import { IsString, IsOptional, IsInt } from 'class-validator';
+import { IsString, IsOptional, IsInt, Min, IsUUID } from 'class-validator';
 import { Type } from 'class-transformer';
 
-export class InventoryItemsUpdateDTO {
+export class InventoryItemUpdateDTO {
   @IsOptional()
   @IsString()
   itemName?: string;
@@ -11,13 +11,13 @@ export class InventoryItemsUpdateDTO {
   itemCategory?: string;
 
   @IsOptional()
-  @Type(() => Number)
   @IsInt()
+  @Min(0)
   currentStock?: number;
 
   @IsOptional()
-  @Type(() => Number)
   @IsInt()
+  @Min(0)
   maximumStock?: number;
 
   @IsOptional()
@@ -27,4 +27,8 @@ export class InventoryItemsUpdateDTO {
   @IsOptional()
   @IsString()
   description?: string;
+
+  @IsOptional()
+  @IsUUID()
+  catalogProductId?: string;
 }

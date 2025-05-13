@@ -38,7 +38,7 @@ export class ProductCatalogCreateDTO {
   @IsNotEmpty()
   @Type(() => Number)
   @IsInt()
-  currentAvailableStock: number;
+  stockLevel: number;
 
   @IsNotEmpty()
   @Type(() => Number)
@@ -62,8 +62,8 @@ export class ProductCatalogCreateDTO {
   description?: string;
 
   @IsOptional()
-  @IsUrl()
-  imageUrl?: string;
+  @IsString()
+  image?: string;
 
   @IsOptional()
   @IsBoolean()

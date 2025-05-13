@@ -5,23 +5,23 @@ export class CompanyInformationReadDTO {
   userId: string;
 
   name: string;
-  companyEmail?: string | null;
-  phoneNumber?: string | null;
-  companyWebsite?: string | null;
-  establishedYear?: number | null;
+  companyEmail?: string;
+  phoneNumber?: string;
+  companyWebsite?: string;
+  establishedYear?: number;
 
-  industry?: string | null;
-  companySize?: string | null;
-  speciallization?: string | null;
-  companySubtitle?: string | null;
+  industry?: string;
+  companySize?: string;
+  speciallization?: string;
+  companySubtitle?: string;
 
-  addressStreet?: string | null;
-  addressCity?: string | null;
-  addressState?: string | null;
-  addressZipCode?: string | null;
-  addressCountry?: string | null;
+  addressStreet?: string;
+  addressCity?: string;
+  addressState?: string;
+  addressZipCode?: string;
+  addressCountry?: string;
 
-  companyDescription?: string | null;
+  companyDescription?: string;
 
   tags?: CompanyTagReadDTO[];
 

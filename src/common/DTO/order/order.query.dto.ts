@@ -8,7 +8,7 @@ import {
   Min,
   IsIn,
 } from 'class-validator';
-import { OrderStatus } from 'generated/prisma';
+import { OrderStatus, Status } from 'generated/prisma';
 
 export class OrderQueryDTO {
   @IsOptional()

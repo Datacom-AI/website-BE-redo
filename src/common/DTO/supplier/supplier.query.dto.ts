@@ -8,7 +8,7 @@ import {
   Min,
   IsIn,
 } from 'class-validator';
-import { SupplierStatus } from 'generated/prisma';
+import { Status } from 'generated/prisma';
 
 export class SupplierQueryDTO {
   @IsOptional()
@@ -20,8 +20,8 @@ export class SupplierQueryDTO {
   supplierCategoryId?: string;
 
   @IsOptional()
-  @IsEnum(SupplierStatus)
-  status?: SupplierStatus;
+  @IsEnum(Status)
+  status?: Status;
 
   @IsOptional()
   @IsString()

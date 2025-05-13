@@ -1,10 +1,25 @@
-import { IsOptional, IsInt, Min } from 'class-validator';
-import { Type } from 'class-transformer';
+import {
+  IsOptional,
+  IsInt,
+  IsPositive,
+  IsEnum,
+  IsString,
+  MaxLength,
+} from 'class-validator';
+import { OrderStatus } from 'generated/prisma';
 
 export class OrderUpdateDTO {
   @IsOptional()
-  @Type(() => Number)
   @IsInt()
-  @Min(1)
+  @IsPositive()
   quantity?: number;
+
+  @IsOptional()
+  @IsEnum(OrderStatus)
+  status?: OrderStatus;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  shippingNotes?: string;
 }

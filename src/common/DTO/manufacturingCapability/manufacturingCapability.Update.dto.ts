@@ -7,5 +7,5 @@ export class ManufacturingCapabilityUpdateDTO {
 
   @IsOptional()
   @IsNumber()
-  minimumOrderQuantity?: number;
+  minimumOrderValue?: number;
 }

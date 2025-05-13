@@ -1,7 +1,15 @@
-import { IsString, IsNotEmpty, IsInt, IsOptional, IsIn } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsInt,
+  IsOptional,
+  IsIn,
+  IsUUID,
+} from 'class-validator';
 import { Type } from 'class-transformer';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 
-export class InventoryItemsCreateDTO {
+export class InventoryItemCreateDTO {
   @IsNotEmpty()
   @IsString()
   itemName: string;
@@ -31,4 +39,9 @@ export class InventoryItemsCreateDTO {
   @IsOptional()
   @IsString()
   description?: string;
+
+  @ApiPropertyOptional({ description: 'Linked catalog product ID' })
+  @IsOptional()
+  @IsUUID()
+  catalogProductId?: string;
 }
