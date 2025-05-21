@@ -10,9 +10,6 @@ import { OrderModule } from './order/order.module';
 import { InventoryModule } from './inventory/inventory.module';
 import { RetailerProductModule } from './retailer-product/retailer-product.module';
 import { SupplierModule } from './supplier/supplier.module';
-import { ProductionLineService } from './production-line/production-line.service';
-import { ProductionLineController } from './production-line/production-line.controller';
-import { ProductionLineModule } from './production-line/production-line.module';
 
 @Module({
   imports: [
@@ -25,9 +22,8 @@ import { ProductionLineModule } from './production-line/production-line.module';
     InventoryModule,
     RetailerProductModule,
     SupplierModule,
-    ProductionLineModule,
   ],
-  controllers: [AppController, ProductionLineController],
-  providers: [AppService, ProductionLineService],
+  controllers: [AppController],
+  providers: [AppService],
 })
 export class AppModule {}

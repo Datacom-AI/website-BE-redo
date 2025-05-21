@@ -17,6 +17,24 @@ import { ProductService } from '../product/product.service';
 export class InventoryService {
   private readonly logger = new Logger(InventoryService.name);
 
+  private mapToReadDTO(item: any): InventoryItemReadDTO {
+    return {
+      id: item.id,
+      manufacturerDetailsId: item.manufacturerDetailsId,
+      itemName: item.itemName,
+      itemCategory: item.itemCategory,
+      itemSKU: item.itemSKU,
+      currentStock: item.currentStock,
+      maximumStock: item.maximumStock,
+      storageLocation: item.storageLocation,
+      description: item.description,
+      catalogProductId: item.catalogProductId,
+      catalogProduct: item.catalogProduct || undefined,
+      createdAt: item.createdAt,
+      updatedAt: item.updatedAt,
+    };
+  }
+
   constructor(
     private prisma: PrismaService,
     private productService: ProductService,
@@ -271,23 +289,5 @@ export class InventoryService {
         'Could not delete inventory item. Please try again.',
       );
     }
-  }
-
-  private mapToReadDTO(item: any): InventoryItemReadDTO {
-    return {
-      id: item.id,
-      manufacturerDetailsId: item.manufacturerDetailsId,
-      itemName: item.itemName,
-      itemCategory: item.itemCategory,
-      itemSKU: item.itemSKU,
-      currentStock: item.currentStock,
-      maximumStock: item.maximumStock,
-      storageLocation: item.storageLocation,
-      description: item.description,
-      catalogProductId: item.catalogProductId,
-      catalogProduct: item.catalogProduct || undefined,
-      createdAt: item.createdAt,
-      updatedAt: item.updatedAt,
-    };
   }
 }
